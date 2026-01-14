@@ -95,14 +95,14 @@ export default function SettingsPage() {
 
           <div>
             <label className="block text-sm font-medium text-dark-300 mb-2">
-              Campaign ID
+              List ID <span className="text-dark-500">(optional)</span>
             </label>
             <input
               type="text"
               value={settings.myphonerCampaignId}
               onChange={(e) => setSettings({ ...settings, myphonerCampaignId: e.target.value })}
               className="input-field"
-              placeholder="Enter your campaign ID"
+              placeholder="Leave empty for global tracking"
             />
           </div>
         </div>
@@ -116,6 +116,8 @@ export default function SettingsPage() {
             2. Click &quot;Generate API Key&quot;
             <br />
             3. Copy and paste the key above
+            <br /><br />
+            <span className="text-dark-500">List ID is optional. Leave empty to track all lists globally.</span>
           </p>
         </div>
       </div>
