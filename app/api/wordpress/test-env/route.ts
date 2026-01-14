@@ -8,12 +8,14 @@ export async function GET() {
   const password = process.env.WORDPRESS_APP_PASSWORD;
   const url = process.env.WORDPRESS_URL;
   
+  // Get ALL environment variables to see what's available
+  const allEnvKeys = Object.keys(process.env).sort();
+  const wordEnvKeys = allEnvKeys.filter(k => k.includes('WORD'));
+  
   // Get all WordPress-related env vars
   const allWordEnvVars: Record<string, string> = {};
-  Object.keys(process.env).forEach(key => {
-    if (key.includes('WORD')) {
-      allWordEnvVars[key] = process.env[key] || '';
-    }
+  wordEnvKeys.forEach(key => {
+    allWordEnvVars[key] = process.env[key] || '';
   });
   
   // Check for quotes
@@ -21,6 +23,14 @@ export async function GET() {
     username: username ? (username.startsWith('"') || username.startsWith("'")) : false,
     password: password ? (password.startsWith('"') || password.startsWith("'")) : false,
     url: url ? (url.startsWith('"') || url.startsWith("'")) : false,
+  };
+  
+  // Check other important env vars to see if ANY are working
+  const otherEnvVars = {
+    NODE_ENV: process.env.NODE_ENV,
+    PORT: process.env.PORT,
+    JWT_SECRET: process.env.JWT_SECRET ? 'SET' : 'NOT SET',
+    ADMIN_USERNAME: process.env.ADMIN_USERNAME ? 'SET' : 'NOT SET',
   };
   
   return NextResponse.json({
@@ -35,7 +45,6 @@ export async function GET() {
       password: password?.length || 0,
     },
     hasQuotes,
-    // Show first/last chars for debugging (not full values for security)
     preview: {
       url: url || 'NOT SET',
       username: username ? `${username.substring(0, 5)}...${username.substring(Math.max(0, username.length - 5))}` : 'NOT SET',
@@ -47,7 +56,10 @@ export async function GET() {
       password: password ? `"${password}"` : 'NOT SET',
     },
     allWordEnvVars,
-    allEnvKeys: Object.keys(process.env).filter(k => k.includes('WORD')).join(', '),
+    wordEnvKeys: wordEnvKeys.join(', '),
+    otherEnvVars,
+    totalEnvVars: allEnvKeys.length,
+    sampleEnvKeys: allEnvKeys.slice(0, 20).join(', '), // First 20 env vars
   });
 }
 
