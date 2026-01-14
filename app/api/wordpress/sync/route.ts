@@ -4,10 +4,29 @@ import { addOrUpdateWorkerByEmail, getWorkers, deleteWorker } from '@/lib/data';
 
 export async function POST() {
   try {
-    // Check if WordPress credentials are configured (trim to handle whitespace)
-    const username = process.env.WORDPRESS_USERNAME?.trim();
-    const password = process.env.WORDPRESS_APP_PASSWORD?.trim();
-    const url = process.env.WORDPRESS_URL?.trim();
+    // Check if WordPress credentials are configured
+    // Handle quoted values and trim whitespace
+    const getEnvValue = (key: string): string => {
+      const value = process.env[key];
+      if (!value) return '';
+      
+      let cleaned = value.trim();
+      // Remove surrounding quotes if present
+      if ((cleaned.startsWith('"') && cleaned.endsWith('"')) || 
+          (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
+        cleaned = cleaned.slice(1, -1);
+      }
+      
+      return cleaned.trim();
+    };
+    
+    const username = getEnvValue('WORDPRESS_USERNAME');
+    const password = getEnvValue('WORDPRESS_APP_PASSWORD');
+    const url = getEnvValue('WORDPRESS_URL');
+    
+    // Debug: log what we're getting
+    const rawUsername = process.env.WORDPRESS_USERNAME || '';
+    const rawPassword = process.env.WORDPRESS_APP_PASSWORD || '';
     
     console.log('WordPress Config Check:', {
       hasUrl: !!url,
@@ -16,13 +35,17 @@ export async function POST() {
       urlLength: url?.length || 0,
       usernameLength: username?.length || 0,
       passwordLength: password?.length || 0,
+      rawUsernameLength: rawUsername?.length || 0,
+      rawPasswordLength: rawPassword?.length || 0,
+      rawUsernameHasQuotes: rawUsername.startsWith('"') || rawUsername.startsWith("'"),
+      rawPasswordHasQuotes: rawPassword.startsWith('"') || rawPassword.startsWith("'"),
       allEnvKeys: Object.keys(process.env).filter(k => k.includes('WORD')).join(', '),
     });
     
     if (!username || !password) {
       return NextResponse.json({
         success: false,
-        error: `WordPress credentials not configured. Missing: ${!username ? 'WORDPRESS_USERNAME' : ''} ${!password ? 'WORDPRESS_APP_PASSWORD' : ''}. Please verify these are set in Hostinger (Node.js app → Environment Variables) and click "Save and redeploy" to restart the server.`,
+        error: `WordPress credentials not configured. Missing: ${!username ? 'WORDPRESS_USERNAME' : ''} ${!password ? 'WORDPRESS_APP_PASSWORD' : ''}. Raw values: username length=${rawUsername.length}, password length=${rawPassword.length}. Please verify these are set in Hostinger (Node.js app → Environment Variables) and click "Save and redeploy" to restart the server.`,
       }, { status: 400 });
     }
 

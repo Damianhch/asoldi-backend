@@ -2,11 +2,26 @@
 // Syncs users with 'employee' role from your WordPress site
 
 // Read environment variables at runtime, not at module load time
+// Handles quoted values and trims whitespace
 function getWordPressConfig() {
+  const getEnv = (key: string, defaultValue = ''): string => {
+    const value = process.env[key];
+    if (!value) return defaultValue;
+    
+    // Remove surrounding quotes if present (single or double)
+    let cleaned = value.trim();
+    if ((cleaned.startsWith('"') && cleaned.endsWith('"')) || 
+        (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
+      cleaned = cleaned.slice(1, -1);
+    }
+    
+    return cleaned.trim();
+  };
+  
   return {
-    url: (process.env.WORDPRESS_URL || 'https://asoldi.com').trim(),
-    username: process.env.WORDPRESS_USERNAME?.trim() || '',
-    password: process.env.WORDPRESS_APP_PASSWORD?.trim() || '',
+    url: getEnv('WORDPRESS_URL', 'https://asoldi.com'),
+    username: getEnv('WORDPRESS_USERNAME'),
+    password: getEnv('WORDPRESS_APP_PASSWORD'),
   };
 }
 
