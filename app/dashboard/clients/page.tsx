@@ -151,7 +151,7 @@ export default function ClientsPage() {
           </div>
         ) : customers.length === 0 ? (
           <p className="text-dark-400 text-center py-12">
-            No customers found. Connect to Luca in Settings.
+            No customers found. Connect to Luca by adding LUCA_API_KEY environment variable in Hostinger.
           </p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

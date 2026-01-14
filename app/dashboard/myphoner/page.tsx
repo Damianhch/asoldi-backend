@@ -149,7 +149,7 @@ export default function MyphonerPage() {
           {!syncStatus.connected && (
             <div className="flex items-center gap-2 text-amber-400">
               <AlertTriangle className="w-5 h-5" />
-              <span className="text-sm">Configure API key in settings</span>
+              <span className="text-sm">Configure API key as environment variable</span>
             </div>
           )}
         </div>
@@ -287,7 +287,7 @@ export default function MyphonerPage() {
           <p className="text-blue-400">MYPHONER_CAMPAIGN_ID=your-campaign-id</p>
         </div>
         <p className="text-dark-500 text-sm mt-4">
-          Get your API key from MyPhoner Settings → API → Generate Key
+          Get your API key from MyPhoner Settings → API → Generate Key, then add it as MYPHONER_API_KEY environment variable in Hostinger
         </p>
       </div>
     </div>

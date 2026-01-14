@@ -53,7 +53,7 @@ export default function IncomePage() {
       setConnected(testData.connected);
 
       if (!testData.connected) {
-        setError('Not connected to Luca. Add your API key in Settings.');
+        setError('Not connected to Luca. Add your API key as LUCA_API_KEY environment variable in Hostinger.');
         setLoading(false);
         return;
       }
@@ -119,7 +119,7 @@ export default function IncomePage() {
         ) : (
           <>
             <AlertCircle className="w-5 h-5 text-amber-400" />
-            <span className="text-amber-400">Not connected - Add API key in Settings</span>
+            <span className="text-amber-400">Not connected - Add LUCA_API_KEY environment variable in Hostinger</span>
           </>
         )}
       </div>

@@ -143,7 +143,7 @@ export default function PaymentsPage() {
           </p>
           <ol className="list-decimal list-inside text-dark-400 text-sm space-y-2">
             <li>Generate a Personal API Key in Luca</li>
-            <li>Add your API key in Settings</li>
+            <li>Add your API key as environment variables in Hostinger</li>
             <li>Sync will automatically pull payment schedules</li>
           </ol>
         </div>
