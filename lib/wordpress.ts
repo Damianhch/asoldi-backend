@@ -1,9 +1,14 @@
 // WordPress REST API Integration
 // Syncs users with 'employee' role from your WordPress site
 
-const WORDPRESS_URL = process.env.WORDPRESS_URL || 'https://asoldi.com';
-const WORDPRESS_USERNAME = process.env.WORDPRESS_USERNAME;
-const WORDPRESS_APP_PASSWORD = process.env.WORDPRESS_APP_PASSWORD;
+// Read environment variables at runtime, not at module load time
+function getWordPressConfig() {
+  return {
+    url: (process.env.WORDPRESS_URL || 'https://asoldi.com').trim(),
+    username: process.env.WORDPRESS_USERNAME?.trim() || '',
+    password: process.env.WORDPRESS_APP_PASSWORD?.trim() || '',
+  };
+}
 
 interface WordPressUser {
   id: number;
@@ -23,11 +28,12 @@ interface WordPressResponse<T> {
 
 // Generate Basic Auth header
 function getAuthHeader(): string {
-  if (!WORDPRESS_USERNAME || !WORDPRESS_APP_PASSWORD) {
+  const config = getWordPressConfig();
+  if (!config.username || !config.password) {
     throw new Error('WordPress credentials not configured');
   }
   
-  const credentials = Buffer.from(`${WORDPRESS_USERNAME}:${WORDPRESS_APP_PASSWORD}`).toString('base64');
+  const credentials = Buffer.from(`${config.username}:${config.password}`).toString('base64');
   return `Basic ${credentials}`;
 }
 
@@ -36,7 +42,8 @@ async function wpFetch<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<WordPressResponse<T>> {
-  if (!WORDPRESS_URL) {
+  const config = getWordPressConfig();
+  if (!config.url) {
     return { success: false, error: 'WordPress URL not configured' };
   }
 
@@ -47,11 +54,11 @@ async function wpFetch<T>(
     };
 
     // Add auth header if credentials are available
-    if (WORDPRESS_USERNAME && WORDPRESS_APP_PASSWORD) {
+    if (config.username && config.password) {
       headers['Authorization'] = getAuthHeader();
     }
 
-    const url = `${WORDPRESS_URL}/wp-json/wp/v2${endpoint}`;
+    const url = `${config.url}/wp-json/wp/v2${endpoint}`;
     console.log('WordPress API Request:', url);
     
     const response = await fetch(url, {
@@ -140,11 +147,12 @@ export async function getWordPressUser(id: number): Promise<WordPressResponse<Wo
 // Test WordPress connection
 export async function testWordPressConnection(): Promise<boolean> {
   try {
-    if (!WORDPRESS_USERNAME || !WORDPRESS_APP_PASSWORD) {
+    const config = getWordPressConfig();
+    if (!config.username || !config.password) {
       return false;
     }
     
-    const response = await fetch(`${WORDPRESS_URL}/wp-json/wp/v2/users/me`, {
+    const response = await fetch(`${config.url}/wp-json/wp/v2/users/me`, {
       headers: {
         'Authorization': getAuthHeader(),
       },

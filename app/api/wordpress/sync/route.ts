@@ -4,10 +4,10 @@ import { addOrUpdateWorkerByEmail, getWorkers, deleteWorker } from '@/lib/data';
 
 export async function POST() {
   try {
-    // Check if WordPress credentials are configured
-    const username = process.env.WORDPRESS_USERNAME;
-    const password = process.env.WORDPRESS_APP_PASSWORD;
-    const url = process.env.WORDPRESS_URL;
+    // Check if WordPress credentials are configured (trim to handle whitespace)
+    const username = process.env.WORDPRESS_USERNAME?.trim();
+    const password = process.env.WORDPRESS_APP_PASSWORD?.trim();
+    const url = process.env.WORDPRESS_URL?.trim();
     
     console.log('WordPress Config Check:', {
       hasUrl: !!url,
@@ -16,12 +16,13 @@ export async function POST() {
       urlLength: url?.length || 0,
       usernameLength: username?.length || 0,
       passwordLength: password?.length || 0,
+      allEnvKeys: Object.keys(process.env).filter(k => k.includes('WORD')).join(', '),
     });
     
     if (!username || !password) {
       return NextResponse.json({
         success: false,
-        error: `WordPress credentials not configured. Missing: ${!username ? 'WORDPRESS_USERNAME' : ''} ${!password ? 'WORDPRESS_APP_PASSWORD' : ''}. Please set these as environment variables in Hostinger (Node.js app → Environment Variables) and restart the server.`,
+        error: `WordPress credentials not configured. Missing: ${!username ? 'WORDPRESS_USERNAME' : ''} ${!password ? 'WORDPRESS_APP_PASSWORD' : ''}. Please verify these are set in Hostinger (Node.js app → Environment Variables) and click "Save and redeploy" to restart the server.`,
       }, { status: 400 });
     }
 
