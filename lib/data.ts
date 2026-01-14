@@ -1,260 +1,37 @@
-import { Worker, DashboardStats } from './types';
+import { Worker, DashboardStats, WorkerChecklist } from './types';
 
-// In-memory data store (in production, use a database)
-// This will persist during the server session but reset on restart
-// For production, connect to a database like PostgreSQL, MongoDB, or use Vercel KV
+// In-memory data store - workers will be synced from WordPress
+let workers: Worker[] = [];
 
-let workers: Worker[] = [
-  {
-    id: '1',
-    name: 'Emma Hansen',
-    email: 'emma@asoldi.com',
-    phone: '+47 123 45 678',
-    role: 'caller',
-    status: 'active',
-    startDate: '2025-11-01',
-    checklist: {
-      contractSent: true,
-      contractSigned: true,
-      oneWeekMeeting: true,
-      twoWeekMeeting: true,
-      monthlyReview: false,
-      trainingCompleted: true,
-      systemAccessGranted: true,
-      welcomeEmailSent: true,
-      bankDetailsReceived: true,
-      taxFormReceived: true,
-    },
-    myphonerStats: {
-      totalCalls: 245,
-      successfulCalls: 89,
-      meetingsBooked: 34,
-      winners: 12,
-      conversionRate: 14.3,
-      lastCallDate: '2026-01-13',
-    },
-    paymentInfo: {
-      hourlyRate: 180,
-      commissionPerWinner: 500,
-      totalOwed: 8500,
-      nextPayday: '2026-01-25',
-      paymentMethod: 'bank',
-    },
-    notes: [
-      { id: 'n1', content: 'Excellent performer, consider for team lead position', createdAt: '2026-01-10', createdBy: 'admin' }
-    ],
-    createdAt: '2025-11-01',
-    updatedAt: '2026-01-13',
-  },
-  {
-    id: '2',
-    name: 'Lars Olsen',
-    email: 'lars@asoldi.com',
-    phone: '+47 234 56 789',
-    role: 'caller',
-    status: 'active',
-    startDate: '2025-12-01',
-    checklist: {
-      contractSent: true,
-      contractSigned: true,
-      oneWeekMeeting: true,
-      twoWeekMeeting: false,
-      monthlyReview: false,
-      trainingCompleted: true,
-      systemAccessGranted: true,
-      welcomeEmailSent: true,
-      bankDetailsReceived: true,
-      taxFormReceived: false,
-    },
-    myphonerStats: {
-      totalCalls: 156,
-      successfulCalls: 52,
-      meetingsBooked: 21,
-      winners: 7,
-      conversionRate: 13.5,
-      lastCallDate: '2026-01-12',
-    },
-    paymentInfo: {
-      hourlyRate: 170,
-      commissionPerWinner: 500,
-      totalOwed: 5200,
-      nextPayday: '2026-01-25',
-      paymentMethod: 'bank',
-    },
-    notes: [],
-    createdAt: '2025-12-01',
-    updatedAt: '2026-01-12',
-  },
-  {
-    id: '3',
-    name: 'Sofia Berg',
-    email: 'sofia@asoldi.com',
-    phone: '+47 345 67 890',
-    role: 'caller',
-    status: 'onboarding',
-    startDate: '2026-01-08',
-    checklist: {
-      contractSent: true,
-      contractSigned: true,
-      oneWeekMeeting: false,
-      twoWeekMeeting: false,
-      monthlyReview: false,
-      trainingCompleted: false,
-      systemAccessGranted: true,
-      welcomeEmailSent: true,
-      bankDetailsReceived: false,
-      taxFormReceived: false,
-    },
-    myphonerStats: {
-      totalCalls: 23,
-      successfulCalls: 8,
-      meetingsBooked: 3,
-      winners: 1,
-      conversionRate: 12.5,
-      lastCallDate: '2026-01-13',
-    },
-    paymentInfo: {
-      hourlyRate: 160,
-      commissionPerWinner: 500,
-      totalOwed: 1100,
-      nextPayday: '2026-01-25',
-      paymentMethod: 'bank',
-    },
-    notes: [
-      { id: 'n2', content: 'New hire - needs extra support during first weeks', createdAt: '2026-01-08', createdBy: 'admin' }
-    ],
-    createdAt: '2026-01-08',
-    updatedAt: '2026-01-13',
-  },
-  {
-    id: '4',
-    name: 'Erik Nilsen',
-    email: 'erik@asoldi.com',
-    phone: '+47 456 78 901',
-    role: 'caller',
-    status: 'active',
-    startDate: '2025-10-15',
-    checklist: {
-      contractSent: true,
-      contractSigned: true,
-      oneWeekMeeting: true,
-      twoWeekMeeting: true,
-      monthlyReview: true,
-      trainingCompleted: true,
-      systemAccessGranted: true,
-      welcomeEmailSent: true,
-      bankDetailsReceived: true,
-      taxFormReceived: true,
-    },
-    myphonerStats: {
-      totalCalls: 312,
-      successfulCalls: 98,
-      meetingsBooked: 42,
-      winners: 15,
-      conversionRate: 14.7,
-      lastCallDate: '2026-01-13',
-    },
-    paymentInfo: {
-      hourlyRate: 190,
-      commissionPerWinner: 500,
-      totalOwed: 11200,
-      nextPayday: '2026-01-25',
-      paymentMethod: 'bank',
-    },
-    notes: [],
-    createdAt: '2025-10-15',
-    updatedAt: '2026-01-13',
-  },
-  {
-    id: '5',
-    name: 'Mia Johansen',
-    email: 'mia@asoldi.com',
-    phone: '+47 567 89 012',
-    role: 'caller',
-    status: 'active',
-    startDate: '2025-11-15',
-    checklist: {
-      contractSent: true,
-      contractSigned: true,
-      oneWeekMeeting: true,
-      twoWeekMeeting: true,
-      monthlyReview: false,
-      trainingCompleted: true,
-      systemAccessGranted: true,
-      welcomeEmailSent: true,
-      bankDetailsReceived: true,
-      taxFormReceived: true,
-    },
-    myphonerStats: {
-      totalCalls: 198,
-      successfulCalls: 71,
-      meetingsBooked: 28,
-      winners: 9,
-      conversionRate: 13.9,
-      lastCallDate: '2026-01-11',
-    },
-    paymentInfo: {
-      hourlyRate: 175,
-      commissionPerWinner: 500,
-      totalOwed: 6800,
-      nextPayday: '2026-01-25',
-      paymentMethod: 'bank',
-    },
-    notes: [],
-    createdAt: '2025-11-15',
-    updatedAt: '2026-01-11',
-  },
-  {
-    id: '6',
-    name: 'Oscar Andersen',
-    email: 'oscar@asoldi.com',
-    phone: '+47 678 90 123',
-    role: 'caller',
-    status: 'inactive',
-    startDate: '2025-09-01',
-    checklist: {
-      contractSent: true,
-      contractSigned: true,
-      oneWeekMeeting: true,
-      twoWeekMeeting: true,
-      monthlyReview: true,
-      trainingCompleted: true,
-      systemAccessGranted: false,
-      welcomeEmailSent: true,
-      bankDetailsReceived: true,
-      taxFormReceived: true,
-    },
-    myphonerStats: {
-      totalCalls: 0,
-      successfulCalls: 0,
-      meetingsBooked: 0,
-      winners: 0,
-      conversionRate: 0,
-      lastCallDate: '2025-12-20',
-    },
-    paymentInfo: {
-      hourlyRate: 170,
-      commissionPerWinner: 500,
-      totalOwed: 0,
-      lastPaymentDate: '2025-12-25',
-      nextPayday: '2026-01-25',
-      paymentMethod: 'bank',
-    },
-    notes: [
-      { id: 'n3', content: 'On leave until February 2026', createdAt: '2025-12-18', createdBy: 'admin' }
-    ],
-    createdAt: '2025-09-01',
-    updatedAt: '2025-12-20',
-  },
-];
+// Default empty checklist (all unchecked)
+export const DEFAULT_CHECKLIST: WorkerChecklist = {
+  contractSent: false,
+  contractSigned: false,
+  oneWeekMeeting: false,
+  twoWeekMeeting: false,
+  monthlyReview: false,
+  trainingCompleted: false,
+  systemAccessGranted: false,
+  welcomeEmailSent: false,
+  bankDetailsReceived: false,
+  taxFormReceived: false,
+};
 
 // Data access functions
 export function getWorkers(): Worker[] {
   return workers;
 }
 
+export function setWorkers(newWorkers: Worker[]): void {
+  workers = newWorkers;
+}
+
 export function getWorkerById(id: string): Worker | undefined {
   return workers.find(w => w.id === id);
+}
+
+export function getWorkerByEmail(email: string): Worker | undefined {
+  return workers.find(w => w.email.toLowerCase() === email.toLowerCase());
 }
 
 export function updateWorker(id: string, updates: Partial<Worker>): Worker | null {
@@ -282,6 +59,48 @@ export function addWorker(worker: Omit<Worker, 'id' | 'createdAt' | 'updatedAt'>
   return newWorker;
 }
 
+export function addOrUpdateWorkerByEmail(workerData: {
+  name: string;
+  email: string;
+  wordpressId?: number;
+  role?: 'caller' | 'admin' | 'other';
+}): Worker {
+  const existing = getWorkerByEmail(workerData.email);
+  
+  if (existing) {
+    // Update existing worker
+    return updateWorker(existing.id, {
+      name: workerData.name,
+      wordpressId: workerData.wordpressId,
+    }) as Worker;
+  }
+  
+  // Create new worker with empty checklist
+  return addWorker({
+    name: workerData.name,
+    email: workerData.email,
+    wordpressId: workerData.wordpressId,
+    role: workerData.role || 'caller',
+    status: 'active',
+    startDate: new Date().toISOString().split('T')[0],
+    checklist: { ...DEFAULT_CHECKLIST },
+    myphonerStats: {
+      totalCalls: 0,
+      meetingsBooked: 0,
+      hoursCalled: 0,
+      conversionRate: 0,
+    },
+    paymentInfo: {
+      hourlyRate: 0,
+      commissionPerMeeting: 0,
+      totalOwed: 0,
+      nextPayday: getNextPayday(),
+      paymentMethod: 'bank',
+    },
+    notes: [],
+  });
+}
+
 export function deleteWorker(id: string): boolean {
   const index = workers.findIndex(w => w.id === id);
   if (index === -1) return false;
@@ -295,26 +114,16 @@ export function getDashboardStats(): DashboardStats {
   const onboardingWorkers = workers.filter(w => w.status === 'onboarding');
   
   const totalMeetings = workers.reduce((sum, w) => sum + (w.myphonerStats?.meetingsBooked || 0), 0);
-  const totalWinners = workers.reduce((sum, w) => sum + (w.myphonerStats?.winners || 0), 0);
+  const totalHours = workers.reduce((sum, w) => sum + (w.myphonerStats?.hoursCalled || 0), 0);
   const totalOwed = workers.reduce((sum, w) => sum + (w.paymentInfo?.totalOwed || 0), 0);
   
-  // Calculate days until next payday (25th of each month)
-  const today = new Date();
-  const currentMonth = today.getMonth();
-  const currentYear = today.getFullYear();
-  let nextPayday = new Date(currentYear, currentMonth, 25);
-  
-  if (today > nextPayday) {
-    nextPayday = new Date(currentYear, currentMonth + 1, 25);
-  }
-  
-  const daysUntilPayday = Math.ceil((nextPayday.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  const daysUntilPayday = calculateDaysUntilPayday();
   
   return {
     totalWorkers: workers.length,
     activeWorkers: activeWorkers.length,
     totalMeetingsThisMonth: totalMeetings,
-    totalWinnersThisMonth: totalWinners,
+    totalHoursThisMonth: totalHours,
     totalOwedThisMonth: totalOwed,
     daysUntilPayday,
     pendingOnboarding: onboardingWorkers.length,
@@ -323,7 +132,7 @@ export function getDashboardStats(): DashboardStats {
 
 export function updateWorkerChecklist(
   workerId: string,
-  checklistKey: keyof Worker['checklist'],
+  checklistKey: keyof WorkerChecklist,
   value: boolean
 ): Worker | null {
   const worker = getWorkerById(workerId);
@@ -353,4 +162,51 @@ export function addWorkerNote(workerId: string, content: string, createdBy: stri
   });
 }
 
+export function updateWorkerMyphonerStats(
+  workerId: string,
+  stats: {
+    totalCalls: number;
+    meetingsBooked: number;
+    hoursCalled: number;
+    conversionRate: number;
+  }
+): Worker | null {
+  return updateWorker(workerId, {
+    myphonerStats: {
+      ...stats,
+      lastSyncDate: new Date().toISOString().split('T')[0],
+    },
+  });
+}
 
+// Helper functions
+function getNextPayday(): string {
+  const today = new Date();
+  const currentMonth = today.getMonth();
+  const currentYear = today.getFullYear();
+  let nextPayday = new Date(currentYear, currentMonth, 25);
+  
+  if (today > nextPayday) {
+    nextPayday = new Date(currentYear, currentMonth + 1, 25);
+  }
+  
+  return nextPayday.toISOString().split('T')[0];
+}
+
+function calculateDaysUntilPayday(): number {
+  const today = new Date();
+  const currentMonth = today.getMonth();
+  const currentYear = today.getFullYear();
+  let nextPayday = new Date(currentYear, currentMonth, 25);
+  
+  if (today > nextPayday) {
+    nextPayday = new Date(currentYear, currentMonth + 1, 25);
+  }
+  
+  return Math.ceil((nextPayday.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+// Clear all workers (for re-sync)
+export function clearWorkers(): void {
+  workers = [];
+}

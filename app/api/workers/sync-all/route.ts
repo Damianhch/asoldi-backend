@@ -39,10 +39,11 @@ export async function POST(request: NextRequest) {
       results,
     });
   } catch (error) {
-    console.error('Sync error:', error);
+    console.error('Sync all error:', error);
     return NextResponse.json(
       { success: false, error: 'Sync failed' },
       { status: 500 }
     );
   }
 }
+

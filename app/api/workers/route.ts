@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getWorkers, addWorker } from '@/lib/data';
-import { Worker } from '@/lib/types';
+import { getWorkers, addWorker, DEFAULT_CHECKLIST } from '@/lib/data';
 
 export async function GET() {
   const workers = getWorkers();
@@ -14,32 +13,19 @@ export async function POST(request: NextRequest) {
     const newWorker = addWorker({
       name: body.name,
       email: body.email,
-      phone: body.phone,
       role: body.role || 'caller',
       status: 'onboarding',
       startDate: new Date().toISOString().split('T')[0],
-      checklist: {
-        contractSent: false,
-        contractSigned: false,
-        oneWeekMeeting: false,
-        twoWeekMeeting: false,
-        monthlyReview: false,
-        trainingCompleted: false,
-        systemAccessGranted: false,
-        welcomeEmailSent: false,
-        bankDetailsReceived: false,
-        taxFormReceived: false,
-      },
+      checklist: { ...DEFAULT_CHECKLIST },
       myphonerStats: {
         totalCalls: 0,
-        successfulCalls: 0,
         meetingsBooked: 0,
-        winners: 0,
+        hoursCalled: 0,
         conversionRate: 0,
       },
       paymentInfo: {
-        hourlyRate: body.hourlyRate || 160,
-        commissionPerWinner: body.commissionPerWinner || 500,
+        hourlyRate: body.hourlyRate || 0,
+        commissionPerMeeting: body.commissionPerMeeting || 0,
         totalOwed: 0,
         nextPayday: getNextPayday(),
         paymentMethod: 'bank',
@@ -69,5 +55,3 @@ function getNextPayday(): string {
   
   return nextPayday.toISOString().split('T')[0];
 }
-
-

@@ -1,5 +1,5 @@
 // WordPress REST API Integration
-// Syncs users from your WordPress site
+// Syncs users with 'employee' role from your WordPress site
 
 const WORDPRESS_URL = process.env.WORDPRESS_URL || 'https://asoldi.com';
 const WORDPRESS_USERNAME = process.env.WORDPRESS_USERNAME;
@@ -12,7 +12,7 @@ interface WordPressUser {
   email: string;
   roles: string[];
   registered_date: string;
-  meta?: Record<string, any>;
+  meta?: Record<string, unknown>;
 }
 
 interface WordPressResponse<T> {
@@ -43,7 +43,7 @@ async function wpFetch<T>(
   try {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...options.headers as Record<string, string>,
+      ...(options.headers as Record<string, string>),
     };
 
     // Add auth header if credentials are available
@@ -80,19 +80,35 @@ export async function getWordPressUsers(): Promise<WordPressResponse<WordPressUs
   return wpFetch<WordPressUser[]>('/users?per_page=100&context=edit');
 }
 
+// Get users by role - specifically 'employee' role
+export async function getWordPressEmployees(): Promise<WordPressResponse<WordPressUser[]>> {
+  // Try to get users with 'employee' role
+  const response = await wpFetch<WordPressUser[]>('/users?per_page=100&context=edit&roles=employee');
+  
+  if (response.success && response.data && response.data.length > 0) {
+    return response;
+  }
+  
+  // If no users found with 'employee' role, try fetching all and filtering
+  const allUsersResponse = await getWordPressUsers();
+  
+  if (!allUsersResponse.success || !allUsersResponse.data) {
+    return allUsersResponse;
+  }
+  
+  // Filter to only include users with 'employee' role
+  const employees = allUsersResponse.data.filter(user => 
+    user.roles.includes('employee') || 
+    user.roles.includes('Employee') ||
+    user.roles.includes('ansatt') // Norwegian for employee
+  );
+  
+  return { success: true, data: employees };
+}
+
 // Get a specific user by ID
 export async function getWordPressUser(id: number): Promise<WordPressResponse<WordPressUser>> {
   return wpFetch<WordPressUser>(`/users/${id}?context=edit`);
-}
-
-// Get users by role
-export async function getWordPressUsersByRole(role: string): Promise<WordPressResponse<WordPressUser[]>> {
-  return wpFetch<WordPressUser[]>(`/users?roles=${role}&per_page=100&context=edit`);
-}
-
-// Search users
-export async function searchWordPressUsers(search: string): Promise<WordPressResponse<WordPressUser[]>> {
-  return wpFetch<WordPressUser[]>(`/users?search=${encodeURIComponent(search)}&per_page=100`);
 }
 
 // Test WordPress connection
@@ -110,61 +126,40 @@ export async function testWordPressConnection(): Promise<boolean> {
 }
 
 // Convert WordPress user to Worker format
-export function wpUserToWorker(wpUser: WordPressUser): {
+export function wpUserToWorkerData(wpUser: WordPressUser): {
   name: string;
   email: string;
+  wordpressId: number;
   role: 'caller' | 'admin' | 'other';
-  status: 'onboarding';
-  startDate: string;
 } {
-  // Map WordPress roles to your worker roles
-  let role: 'caller' | 'admin' | 'other' = 'other';
-  
-  if (wpUser.roles.includes('administrator')) {
-    role = 'admin';
-  } else if (wpUser.roles.includes('subscriber') || wpUser.roles.includes('caller')) {
-    role = 'caller';
-  }
-
   return {
     name: wpUser.name || wpUser.username,
     email: wpUser.email,
-    role,
-    status: 'onboarding',
-    startDate: wpUser.registered_date?.split('T')[0] || new Date().toISOString().split('T')[0],
+    wordpressId: wpUser.id,
+    role: 'caller', // All employees are callers by default
   };
 }
 
-// Sync all WordPress users to workers
-export async function syncWordPressUsers(): Promise<{
+// Sync WordPress employees - returns the employee data
+export async function syncWordPressEmployees(): Promise<{
   synced: number;
-  errors: string[];
-  users: Array<{ name: string; email: string }>;
+  employees: Array<{ name: string; email: string; wordpressId: number }>;
+  error?: string;
 }> {
-  const result = {
-    synced: 0,
-    errors: [] as string[],
-    users: [] as Array<{ name: string; email: string }>,
-  };
-
-  const response = await getWordPressUsers();
+  const response = await getWordPressEmployees();
 
   if (!response.success || !response.data) {
-    result.errors.push(response.error || 'Failed to fetch WordPress users');
-    return result;
+    return {
+      synced: 0,
+      employees: [],
+      error: response.error || 'Failed to fetch WordPress employees',
+    };
   }
 
-  for (const wpUser of response.data) {
-    try {
-      const workerData = wpUserToWorker(wpUser);
-      result.users.push({ name: workerData.name, email: workerData.email });
-      result.synced++;
-    } catch (error) {
-      result.errors.push(`Failed to process user ${wpUser.username}: ${error}`);
-    }
-  }
+  const employees = response.data.map(user => wpUserToWorkerData(user));
 
-  return result;
+  return {
+    synced: employees.length,
+    employees,
+  };
 }
-
-

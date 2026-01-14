@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { syncWordPressUsers, testWordPressConnection } from '@/lib/wordpress';
-import { getWorkers, addWorker } from '@/lib/data';
+import { syncWordPressEmployees, testWordPressConnection } from '@/lib/wordpress';
+import { addOrUpdateWorkerByEmail, getWorkers } from '@/lib/data';
 
 export async function POST() {
   try {
@@ -10,78 +10,47 @@ export async function POST() {
     if (!connected) {
       return NextResponse.json({
         success: false,
-        error: 'Could not connect to WordPress. Check your credentials.',
+        error: 'Could not connect to WordPress. Check your credentials in Settings.',
       }, { status: 400 });
     }
 
-    // Sync users
-    const syncResult = await syncWordPressUsers();
+    // Sync employees only (users with 'employee' role)
+    const syncResult = await syncWordPressEmployees();
     
-    if (syncResult.errors.length > 0 && syncResult.synced === 0) {
+    if (syncResult.error && syncResult.synced === 0) {
       return NextResponse.json({
         success: false,
-        error: syncResult.errors[0],
+        error: syncResult.error,
       }, { status: 400 });
     }
 
-    // Get existing workers to avoid duplicates
-    const existingWorkers = getWorkers();
-    const existingEmails = new Set(existingWorkers.map(w => w.email.toLowerCase()));
-    
     let added = 0;
-    let skipped = 0;
+    let updated = 0;
 
-    for (const user of syncResult.users) {
-      if (existingEmails.has(user.email.toLowerCase())) {
-        skipped++;
-        continue;
-      }
-
-      // Add new worker
-      addWorker({
-        name: user.name,
-        email: user.email,
+    for (const employee of syncResult.employees) {
+      const existingWorkers = getWorkers();
+      const exists = existingWorkers.some(w => w.email.toLowerCase() === employee.email.toLowerCase());
+      
+      addOrUpdateWorkerByEmail({
+        name: employee.name,
+        email: employee.email,
+        wordpressId: employee.wordpressId,
         role: 'caller',
-        status: 'onboarding',
-        startDate: new Date().toISOString().split('T')[0],
-        checklist: {
-          contractSent: false,
-          contractSigned: false,
-          oneWeekMeeting: false,
-          twoWeekMeeting: false,
-          monthlyReview: false,
-          trainingCompleted: false,
-          systemAccessGranted: false,
-          welcomeEmailSent: false,
-          bankDetailsReceived: false,
-          taxFormReceived: false,
-        },
-        myphonerStats: {
-          totalCalls: 0,
-          successfulCalls: 0,
-          meetingsBooked: 0,
-          winners: 0,
-          conversionRate: 0,
-        },
-        paymentInfo: {
-          hourlyRate: 160,
-          commissionPerWinner: 500,
-          totalOwed: 0,
-          nextPayday: getNextPayday(),
-          paymentMethod: 'bank',
-        },
-        notes: [],
       });
       
-      added++;
+      if (exists) {
+        updated++;
+      } else {
+        added++;
+      }
     }
 
     return NextResponse.json({
       success: true,
-      message: `Synced ${syncResult.synced} users from WordPress. Added ${added} new workers, skipped ${skipped} duplicates.`,
+      message: `Synced ${syncResult.synced} employees from WordPress. Added ${added} new, updated ${updated}.`,
       added,
-      skipped,
-      errors: syncResult.errors,
+      updated,
+      total: syncResult.synced,
     });
   } catch (error) {
     console.error('WordPress sync error:', error);
@@ -91,18 +60,3 @@ export async function POST() {
     }, { status: 500 });
   }
 }
-
-function getNextPayday(): string {
-  const today = new Date();
-  const currentMonth = today.getMonth();
-  const currentYear = today.getFullYear();
-  let nextPayday = new Date(currentYear, currentMonth, 25);
-  
-  if (today > nextPayday) {
-    nextPayday = new Date(currentYear, currentMonth + 1, 25);
-  }
-  
-  return nextPayday.toISOString().split('T')[0];
-}
-
-

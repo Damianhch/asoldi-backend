@@ -10,7 +10,7 @@ interface MyphonerResponse<T> {
   error?: string;
 }
 
-interface MyphonerAgent {
+export interface MyphonerAgent {
   id: number;
   name: string;
   email: string;
@@ -29,22 +29,21 @@ interface MyphonerLead {
   updated_at: string;
 }
 
-interface MyphonerCall {
+export interface MyphonerCall {
   id: number;
   lead_id: number;
   agent_id: number;
   outcome: string;
-  duration: number;
+  duration: number; // Duration in seconds
   notes?: string;
   created_at: string;
 }
 
-interface MyphonerStats {
-  agent_id: number;
-  total_calls: number;
-  successful_calls: number;
-  meetings_booked: number;
-  winners: number;
+export interface MyphonerAgentStats {
+  totalCalls: number;
+  meetingsBooked: number;
+  hoursCalled: number; // Hours calculated from duration
+  conversionRate: number; // Calls to meetings conversion
 }
 
 // Helper function for API requests
@@ -141,68 +140,77 @@ export async function getCalls(
   return myphonerFetch<MyphonerCall[]>(endpoint);
 }
 
-// Get stats for an agent
-export async function getAgentStats(
-  agentId: number,
-  fromDate?: string,
-  toDate?: string
-): Promise<MyphonerResponse<MyphonerStats>> {
-  const params = new URLSearchParams();
-  params.append('agent_id', agentId.toString());
-  if (fromDate) params.append('from_date', fromDate);
-  if (toDate) params.append('to_date', toDate);
-
-  return myphonerFetch<MyphonerStats>(`/stats?${params.toString()}`);
-}
-
-// Calculate stats from calls data
-export function calculateStatsFromCalls(calls: MyphonerCall[]): {
-  totalCalls: number;
-  successfulCalls: number;
-  meetingsBooked: number;
-  winners: number;
-  conversionRate: number;
-} {
+// Calculate stats from calls data - Updated for your requirements
+export function calculateStatsFromCalls(calls: MyphonerCall[]): MyphonerAgentStats {
   const totalCalls = calls.length;
   
-  // Adjust these outcome values based on your MyPhoner configuration
-  const successfulCalls = calls.filter(c => 
-    ['connected', 'interested', 'callback', 'meeting', 'sale'].includes(c.outcome.toLowerCase())
-  ).length;
+  // Calculate total duration in seconds, then convert to hours
+  const totalDurationSeconds = calls.reduce((sum, call) => sum + (call.duration || 0), 0);
+  const hoursCalled = Number((totalDurationSeconds / 3600).toFixed(1)); // Convert seconds to hours
   
-  const meetingsBooked = calls.filter(c => 
-    c.outcome.toLowerCase() === 'meeting' || c.outcome.toLowerCase() === 'appointment'
-  ).length;
+  // Count meetings booked - adjust these outcome values based on your MyPhoner configuration
+  const meetingsBooked = calls.filter(c => {
+    const outcome = (c.outcome || '').toLowerCase();
+    return outcome === 'meeting' || 
+           outcome === 'appointment' || 
+           outcome === 'booked' ||
+           outcome === 'møte' || // Norwegian
+           outcome === 'avtale'; // Norwegian
+  }).length;
   
-  const winners = calls.filter(c => 
-    c.outcome.toLowerCase() === 'sale' || c.outcome.toLowerCase() === 'won' || c.outcome.toLowerCase() === 'winner'
-  ).length;
-
+  // Conversion rate: calls to meetings (percentage)
   const conversionRate = totalCalls > 0 
-    ? Number(((winners / totalCalls) * 100).toFixed(1))
+    ? Number(((meetingsBooked / totalCalls) * 100).toFixed(1))
     : 0;
 
   return {
     totalCalls,
-    successfulCalls,
     meetingsBooked,
-    winners,
+    hoursCalled,
     conversionRate,
   };
 }
 
-// Sync worker stats with MyPhoner data
+// Get date range based on time interval
+export function getDateRange(interval: string): { fromDate: string; toDate: string } {
+  const now = new Date();
+  const toDate = now.toISOString().split('T')[0];
+  let fromDate: Date;
+
+  switch (interval) {
+    case 'week':
+      fromDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      break;
+    case 'month':
+      fromDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      break;
+    case '2months':
+      fromDate = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+      break;
+    case '4months':
+      fromDate = new Date(now.getTime() - 120 * 24 * 60 * 60 * 1000);
+      break;
+    case '6months':
+      fromDate = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
+      break;
+    case 'year':
+      fromDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+      break;
+    default:
+      fromDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000); // Default to 1 month
+  }
+
+  return {
+    fromDate: fromDate.toISOString().split('T')[0],
+    toDate,
+  };
+}
+
+// Sync worker stats with MyPhoner data - Updated
 export async function syncWorkerWithMyphoner(
   agentEmail: string,
-  fromDate?: string,
-  toDate?: string
-): Promise<{
-  totalCalls: number;
-  successfulCalls: number;
-  meetingsBooked: number;
-  winners: number;
-  conversionRate: number;
-} | null> {
+  interval: string = 'month'
+): Promise<MyphonerAgentStats | null> {
   // First, find the agent by email
   const agentsResponse = await getAgents();
   
@@ -220,7 +228,10 @@ export async function syncWorkerWithMyphoner(
     return null;
   }
 
-  // Get calls for this agent
+  // Get date range
+  const { fromDate, toDate } = getDateRange(interval);
+
+  // Get calls for this agent within date range
   const callsResponse = await getCalls({
     agent_id: agent.id,
     from_date: fromDate,
@@ -235,10 +246,76 @@ export async function syncWorkerWithMyphoner(
   return calculateStatsFromCalls(callsResponse.data);
 }
 
+// Get stats for a specific agent by email with time interval
+export async function getAgentStatsByEmail(
+  email: string,
+  interval: string = 'month'
+): Promise<{ agent: MyphonerAgent; stats: MyphonerAgentStats } | null> {
+  const agentsResponse = await getAgents();
+  
+  if (!agentsResponse.success || !agentsResponse.data) {
+    return null;
+  }
+
+  const agent = agentsResponse.data.find(a => 
+    a.email.toLowerCase() === email.toLowerCase()
+  );
+
+  if (!agent) {
+    return null;
+  }
+
+  const { fromDate, toDate } = getDateRange(interval);
+
+  const callsResponse = await getCalls({
+    agent_id: agent.id,
+    from_date: fromDate,
+    to_date: toDate,
+  });
+
+  if (!callsResponse.success || !callsResponse.data) {
+    return null;
+  }
+
+  return {
+    agent,
+    stats: calculateStatsFromCalls(callsResponse.data),
+  };
+}
+
+// Get all agents with their stats
+export async function getAllAgentsWithStats(
+  interval: string = 'month'
+): Promise<Array<{ agent: MyphonerAgent; stats: MyphonerAgentStats }>> {
+  const agentsResponse = await getAgents();
+  
+  if (!agentsResponse.success || !agentsResponse.data) {
+    return [];
+  }
+
+  const { fromDate, toDate } = getDateRange(interval);
+  const results: Array<{ agent: MyphonerAgent; stats: MyphonerAgentStats }> = [];
+
+  for (const agent of agentsResponse.data) {
+    const callsResponse = await getCalls({
+      agent_id: agent.id,
+      from_date: fromDate,
+      to_date: toDate,
+    });
+
+    if (callsResponse.success && callsResponse.data) {
+      results.push({
+        agent,
+        stats: calculateStatsFromCalls(callsResponse.data),
+      });
+    }
+  }
+
+  return results;
+}
+
 // Test API connection
 export async function testConnection(): Promise<boolean> {
   const response = await getAgents();
   return response.success;
 }
-
-

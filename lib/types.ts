@@ -3,11 +3,11 @@ export interface Worker {
   id: string;
   name: string;
   email: string;
-  phone?: string;
   role: 'caller' | 'admin' | 'other';
   status: 'active' | 'inactive' | 'onboarding';
   startDate: string;
   avatarUrl?: string;
+  wordpressId?: number; // WordPress user ID
   
   // Checklist items
   checklist: WorkerChecklist;
@@ -40,17 +40,15 @@ export interface WorkerChecklist {
 
 export interface MyphonerStats {
   totalCalls: number;
-  successfulCalls: number;
   meetingsBooked: number;
-  winners: number;
-  conversionRate: number;
-  lastCallDate?: string;
-  campaignId?: string;
+  hoursCalled: number; // Hours called instead of winners
+  conversionRate: number; // Calls to meetings conversion
+  lastSyncDate?: string;
 }
 
 export interface PaymentInfo {
   hourlyRate?: number;
-  commissionPerWinner?: number;
+  commissionPerMeeting?: number;
   totalOwed: number;
   lastPaymentDate?: string;
   nextPayday: string;
@@ -70,7 +68,7 @@ export interface DashboardStats {
   totalWorkers: number;
   activeWorkers: number;
   totalMeetingsThisMonth: number;
-  totalWinnersThisMonth: number;
+  totalHoursThisMonth: number;
   totalOwedThisMonth: number;
   daysUntilPayday: number;
   pendingOnboarding: number;
@@ -81,27 +79,6 @@ export interface ApiResponse<T> {
   success: boolean;
   data?: T;
   error?: string;
-}
-
-// MyPhoner API types
-export interface MyphonerLead {
-  id: string;
-  name: string;
-  phone: string;
-  status: string;
-  agent?: string;
-  outcome?: string;
-  createdAt: string;
-}
-
-export interface MyphonerAgent {
-  id: string;
-  name: string;
-  email: string;
-  stats: {
-    calls: number;
-    wins: number;
-  };
 }
 
 // Auth types
@@ -115,4 +92,14 @@ export interface AuthState {
   user: User | null;
 }
 
+// Time interval options
+export type TimeInterval = 'week' | 'month' | '2months' | '4months' | '6months' | 'year';
 
+export const TIME_INTERVALS: { value: TimeInterval; label: string }[] = [
+  { value: 'week', label: 'Last Week' },
+  { value: 'month', label: 'Last Month' },
+  { value: '2months', label: 'Last 2 Months' },
+  { value: '4months', label: 'Last 4 Months' },
+  { value: '6months', label: 'Last 6 Months' },
+  { value: 'year', label: 'Last Year' },
+];

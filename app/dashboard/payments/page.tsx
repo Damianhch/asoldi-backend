@@ -1,4 +1,6 @@
-import { getWorkers, getDashboardStats } from '@/lib/data';
+'use client';
+
+import { useState, useEffect } from 'react';
 import {
   CreditCard,
   Calendar,
@@ -7,14 +9,44 @@ import {
   AlertCircle,
   Download,
   RefreshCw,
+  Loader2,
 } from 'lucide-react';
+import { Worker, DashboardStats } from '@/lib/types';
 
 export default function PaymentsPage() {
-  const workers = getWorkers();
-  const stats = getDashboardStats();
-  
+  const [workers, setWorkers] = useState<Worker[]>([]);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      const res = await fetch('/api/dashboard');
+      const data = await res.json();
+      if (data.success) {
+        setWorkers(data.workers || []);
+        setStats(data.stats);
+      }
+    } catch (error) {
+      console.error('Failed to fetch data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const activeWorkers = workers.filter(w => w.status !== 'inactive');
   const totalOwed = activeWorkers.reduce((sum, w) => sum + (w.paymentInfo?.totalOwed || 0), 0);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-asoldi-400" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -67,7 +99,7 @@ export default function PaymentsPage() {
                 25th
               </p>
               <p className="text-sm text-dark-500">
-                {stats.daysUntilPayday} days remaining
+                {stats?.daysUntilPayday || 0} days remaining
               </p>
             </div>
           </div>
@@ -110,13 +142,10 @@ export default function PaymentsPage() {
             Luca is a Norwegian accounting software. To integrate:
           </p>
           <ol className="list-decimal list-inside text-dark-400 text-sm space-y-2">
-            <li>Contact Luca support to request API access</li>
-            <li>Add your API credentials to the settings</li>
+            <li>Generate a Personal API Key in Luca</li>
+            <li>Add your API key in Settings</li>
             <li>Sync will automatically pull payment schedules</li>
           </ol>
-          <p className="text-dark-500 text-xs mt-4">
-            Note: Luca may require a business plan for API access
-          </p>
         </div>
       </div>
 
@@ -126,82 +155,88 @@ export default function PaymentsPage() {
           Payment Breakdown
         </h2>
         
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-dark-700">
-                <th className="text-left py-4 px-4 text-dark-400 font-medium">Worker</th>
-                <th className="text-center py-4 px-4 text-dark-400 font-medium">Hourly Rate</th>
-                <th className="text-center py-4 px-4 text-dark-400 font-medium">Winners</th>
-                <th className="text-center py-4 px-4 text-dark-400 font-medium">Commission</th>
-                <th className="text-center py-4 px-4 text-dark-400 font-medium">Total Owed</th>
-                <th className="text-center py-4 px-4 text-dark-400 font-medium">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {activeWorkers.map((worker) => {
-                const winners = worker.myphonerStats?.winners || 0;
-                const commission = winners * (worker.paymentInfo?.commissionPerWinner || 0);
-                
-                return (
-                  <tr key={worker.id} className="border-b border-dark-800 hover:bg-dark-900/50">
-                    <td className="py-4 px-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-asoldi-500 to-blue-500 flex items-center justify-center text-white font-semibold">
-                          {worker.name.charAt(0)}
+        {activeWorkers.length === 0 ? (
+          <p className="text-dark-400 text-center py-8">
+            No workers yet. Sync from WordPress to get started.
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-dark-700">
+                  <th className="text-left py-4 px-4 text-dark-400 font-medium">Worker</th>
+                  <th className="text-center py-4 px-4 text-dark-400 font-medium">Hours Called</th>
+                  <th className="text-center py-4 px-4 text-dark-400 font-medium">Meetings</th>
+                  <th className="text-center py-4 px-4 text-dark-400 font-medium">Hourly Rate</th>
+                  <th className="text-center py-4 px-4 text-dark-400 font-medium">Total Owed</th>
+                  <th className="text-center py-4 px-4 text-dark-400 font-medium">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {activeWorkers.map((worker) => {
+                  const hours = worker.myphonerStats?.hoursCalled || 0;
+                  const meetings = worker.myphonerStats?.meetingsBooked || 0;
+                  
+                  return (
+                    <tr key={worker.id} className="border-b border-dark-800 hover:bg-dark-900/50">
+                      <td className="py-4 px-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-asoldi-500 to-blue-500 flex items-center justify-center text-white font-semibold">
+                            {worker.name.charAt(0)}
+                          </div>
+                          <div>
+                            <p className="font-medium text-white">{worker.name}</p>
+                            <p className="text-sm text-dark-400">{worker.email}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium text-white">{worker.name}</p>
-                          <p className="text-sm text-dark-400">{worker.role}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="text-center py-4 px-4 text-white">
-                      {worker.paymentInfo?.hourlyRate || 0} kr/hr
-                    </td>
-                    <td className="text-center py-4 px-4 text-amber-400 font-medium">
-                      {winners}
-                    </td>
-                    <td className="text-center py-4 px-4 text-white">
-                      {commission.toLocaleString()} kr
-                    </td>
-                    <td className="text-center py-4 px-4">
-                      <span className="text-lg font-bold text-asoldi-400">
-                        {(worker.paymentInfo?.totalOwed || 0).toLocaleString()} kr
-                      </span>
-                    </td>
-                    <td className="text-center py-4 px-4">
-                      {worker.checklist.bankDetailsReceived ? (
-                        <span className="badge badge-success flex items-center gap-1 justify-center">
-                          <CheckCircle2 className="w-3 h-3" />
-                          Ready
+                      </td>
+                      <td className="text-center py-4 px-4 text-amber-400 font-medium">
+                        {hours.toFixed(1)} hrs
+                      </td>
+                      <td className="text-center py-4 px-4 text-purple-400 font-medium">
+                        {meetings}
+                      </td>
+                      <td className="text-center py-4 px-4 text-white">
+                        {worker.paymentInfo?.hourlyRate || 0} kr/hr
+                      </td>
+                      <td className="text-center py-4 px-4">
+                        <span className="text-lg font-bold text-asoldi-400">
+                          {(worker.paymentInfo?.totalOwed || 0).toLocaleString()} kr
                         </span>
-                      ) : (
-                        <span className="badge badge-warning flex items-center gap-1 justify-center">
-                          <AlertCircle className="w-3 h-3" />
-                          Missing Info
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-            <tfoot>
-              <tr className="border-t-2 border-dark-600">
-                <td colSpan={4} className="py-4 px-4 text-right font-semibold text-white">
-                  Total:
-                </td>
-                <td className="text-center py-4 px-4">
-                  <span className="text-2xl font-bold text-asoldi-400">
-                    {totalOwed.toLocaleString()} kr
-                  </span>
-                </td>
-                <td></td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
+                      </td>
+                      <td className="text-center py-4 px-4">
+                        {worker.checklist.bankDetailsReceived ? (
+                          <span className="badge badge-success flex items-center gap-1 justify-center">
+                            <CheckCircle2 className="w-3 h-3" />
+                            Ready
+                          </span>
+                        ) : (
+                          <span className="badge badge-warning flex items-center gap-1 justify-center">
+                            <AlertCircle className="w-3 h-3" />
+                            Missing Info
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot>
+                <tr className="border-t-2 border-dark-600">
+                  <td colSpan={4} className="py-4 px-4 text-right font-semibold text-white">
+                    Total:
+                  </td>
+                  <td className="text-center py-4 px-4">
+                    <span className="text-2xl font-bold text-asoldi-400">
+                      {totalOwed.toLocaleString()} kr
+                    </span>
+                  </td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Payment History */}
@@ -216,5 +251,3 @@ export default function PaymentsPage() {
     </div>
   );
 }
-
-
