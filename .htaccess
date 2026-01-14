@@ -1,0 +1,10 @@
+# Hostinger Node.js app configuration
+# This file helps with routing if needed
+
+DirectoryIndex disabled
+
+RewriteEngine On
+
+# Handle Node.js app
+RewriteRule ^(.*)$ http://127.0.0.1:%{ENV:PORT}/$1 [P,L]
+
