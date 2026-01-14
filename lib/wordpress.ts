@@ -51,16 +51,27 @@ async function wpFetch<T>(
       headers['Authorization'] = getAuthHeader();
     }
 
-    const response = await fetch(`${WORDPRESS_URL}/wp-json/wp/v2${endpoint}`, {
+    const url = `${WORDPRESS_URL}/wp-json/wp/v2${endpoint}`;
+    console.log('WordPress API Request:', url);
+    
+    const response = await fetch(url, {
       ...options,
       headers,
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
+      const errorText = await response.text();
+      let errorData: any = {};
+      
+      try {
+        errorData = JSON.parse(errorText);
+      } catch {
+        errorData = { message: errorText || response.statusText };
+      }
+      
       return {
         success: false,
-        error: errorData.message || `HTTP ${response.status}: ${response.statusText}`,
+        error: errorData.message || errorData.code || `HTTP ${response.status}: ${response.statusText}`,
       };
     }
 
@@ -82,26 +93,41 @@ export async function getWordPressUsers(): Promise<WordPressResponse<WordPressUs
 
 // Get users by role - specifically 'employee' role
 export async function getWordPressEmployees(): Promise<WordPressResponse<WordPressUser[]>> {
-  // Try to get users with 'employee' role
+  // Try to get users with 'employee' role directly
   const response = await wpFetch<WordPressUser[]>('/users?per_page=100&context=edit&roles=employee');
   
   if (response.success && response.data && response.data.length > 0) {
+    console.log(`Found ${response.data.length} employees with 'employee' role`);
     return response;
   }
   
   // If no users found with 'employee' role, try fetching all and filtering
+  console.log('No employees found with direct role filter, fetching all users...');
   const allUsersResponse = await getWordPressUsers();
   
   if (!allUsersResponse.success || !allUsersResponse.data) {
     return allUsersResponse;
   }
   
-  // Filter to only include users with 'employee' role
-  const employees = allUsersResponse.data.filter(user => 
-    user.roles.includes('employee') || 
-    user.roles.includes('Employee') ||
-    user.roles.includes('ansatt') // Norwegian for employee
-  );
+  console.log(`Fetched ${allUsersResponse.data.length} total users, filtering for employees...`);
+  
+  // Filter to only include users with 'employee' role (case-insensitive)
+  const employees = allUsersResponse.data.filter(user => {
+    const roles = user.roles || [];
+    return roles.some(role => 
+      role.toLowerCase() === 'employee' || 
+      role.toLowerCase() === 'ansatt' // Norwegian for employee
+    );
+  });
+  
+  console.log(`Found ${employees.length} employees after filtering`);
+  
+  if (employees.length === 0) {
+    return {
+      success: false,
+      error: `No users found with 'employee' role. Found ${allUsersResponse.data.length} total users. Available roles: ${[...new Set(allUsersResponse.data.flatMap(u => u.roles || []))].join(', ')}`,
+    };
+  }
   
   return { success: true, data: employees };
 }
@@ -114,6 +140,10 @@ export async function getWordPressUser(id: number): Promise<WordPressResponse<Wo
 // Test WordPress connection
 export async function testWordPressConnection(): Promise<boolean> {
   try {
+    if (!WORDPRESS_USERNAME || !WORDPRESS_APP_PASSWORD) {
+      return false;
+    }
+    
     const response = await fetch(`${WORDPRESS_URL}/wp-json/wp/v2/users/me`, {
       headers: {
         'Authorization': getAuthHeader(),
@@ -148,11 +178,19 @@ export async function syncWordPressEmployees(): Promise<{
 }> {
   const response = await getWordPressEmployees();
 
-  if (!response.success || !response.data) {
+  if (!response.success) {
     return {
       synced: 0,
       employees: [],
       error: response.error || 'Failed to fetch WordPress employees',
+    };
+  }
+
+  if (!response.data || response.data.length === 0) {
+    return {
+      synced: 0,
+      employees: [],
+      error: 'No employees found with "employee" role in WordPress',
     };
   }
 

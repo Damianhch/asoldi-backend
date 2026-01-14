@@ -13,6 +13,7 @@ import {
   AlertCircle,
   RefreshCw,
   Loader2,
+  X,
 } from 'lucide-react';
 import { Worker, TIME_INTERVALS, TimeInterval, WorkerChecklist } from '@/lib/types';
 
@@ -23,9 +24,18 @@ export default function WorkersPage() {
   const [timeInterval, setTimeInterval] = useState<TimeInterval>('month');
   const [filter, setFilter] = useState<'all' | 'active' | 'onboarding' | 'inactive'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     fetchWorkers();
+    // Auto-sync from WordPress on page load if no workers
+    const timer = setTimeout(() => {
+      if (workers.length === 0 && !loading) {
+        syncFromWordPress(true);
+      }
+    }, 1000);
+    return () => clearTimeout(timer);
   }, []);
 
   const fetchWorkers = async () => {
@@ -37,6 +47,7 @@ export default function WorkersPage() {
       }
     } catch (error) {
       console.error('Failed to fetch workers:', error);
+      setError('Failed to load workers');
     } finally {
       setLoading(false);
     }
@@ -44,6 +55,8 @@ export default function WorkersPage() {
 
   const syncAllWorkers = async () => {
     setSyncing(true);
+    setError(null);
+    setSuccess(null);
     try {
       const res = await fetch(`/api/workers/sync-all?interval=${timeInterval}`, {
         method: 'POST',
@@ -51,24 +64,36 @@ export default function WorkersPage() {
       const data = await res.json();
       if (data.success) {
         await fetchWorkers();
+        setSuccess(`Synced ${data.results?.filter((r: any) => r.synced).length || 0} workers with MyPhoner`);
+      } else {
+        setError(data.error || 'Failed to sync workers');
       }
     } catch (error) {
       console.error('Failed to sync workers:', error);
+      setError('Failed to sync workers. Check your connection.');
     } finally {
       setSyncing(false);
     }
   };
 
-  const syncFromWordPress = async () => {
+  const syncFromWordPress = async (silent = false) => {
     setSyncing(true);
+    setError(null);
+    setSuccess(null);
     try {
       const res = await fetch('/api/wordpress/sync', { method: 'POST' });
       const data = await res.json();
       if (data.success) {
         await fetchWorkers();
+        if (!silent) {
+          setSuccess(`Synced ${data.total || 0} employees from WordPress. Added ${data.added || 0} new, updated ${data.updated || 0}.`);
+        }
+      } else {
+        setError(data.error || 'Failed to sync from WordPress. Check your credentials in Settings.');
       }
     } catch (error) {
       console.error('Failed to sync from WordPress:', error);
+      setError('Failed to sync from WordPress. Check your connection and credentials.');
     } finally {
       setSyncing(false);
     }
@@ -121,6 +146,41 @@ export default function WorkersPage() {
 
   return (
     <div className="space-y-8">
+      {/* Error/Success Messages */}
+      {error && (
+        <div className="glass-card p-4 bg-red-500/20 border-red-500/50 animate-slide-up">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <AlertCircle className="w-5 h-5 text-red-400" />
+              <p className="text-red-400">{error}</p>
+            </div>
+            <button
+              onClick={() => setError(null)}
+              className="text-red-400 hover:text-red-300"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      )}
+      
+      {success && (
+        <div className="glass-card p-4 bg-asoldi-500/20 border-asoldi-500/50 animate-slide-up">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <CheckCircle2 className="w-5 h-5 text-asoldi-400" />
+              <p className="text-asoldi-400">{success}</p>
+            </div>
+            <button
+              onClick={() => setSuccess(null)}
+              className="text-asoldi-400 hover:text-asoldi-300"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 animate-fade-in">
         <div>
@@ -133,7 +193,7 @@ export default function WorkersPage() {
         </div>
         <div className="flex gap-3">
           <button 
-            onClick={syncFromWordPress}
+            onClick={() => syncFromWordPress()}
             disabled={syncing}
             className="btn-secondary flex items-center gap-2"
           >
@@ -206,12 +266,22 @@ export default function WorkersPage() {
           <Users className="w-12 h-12 text-dark-500 mx-auto mb-4" />
           <p className="text-dark-400 mb-4">
             {workers.length === 0 
-              ? 'No workers yet. Sync from WordPress to get started.'
+              ? 'No workers yet. Click "Sync WordPress" to import employees with "employee" role from your WordPress site.'
               : 'No workers match your filters.'}
           </p>
           {workers.length === 0 && (
-            <button onClick={syncFromWordPress} className="btn-primary">
-              Sync from WordPress
+            <button onClick={() => syncFromWordPress()} className="btn-primary" disabled={syncing}>
+              {syncing ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin inline mr-2" />
+                  Syncing...
+                </>
+              ) : (
+                <>
+                  <Users className="w-4 h-4 inline mr-2" />
+                  Sync from WordPress
+                </>
+              )}
             </button>
           )}
         </div>
