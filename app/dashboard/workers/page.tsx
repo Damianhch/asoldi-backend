@@ -27,6 +27,44 @@ export default function WorkersPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  const fetchWorkers = useCallback(async () => {
+    try {
+      const res = await fetch('/api/workers');
+      const data = await res.json();
+      if (data.success) {
+        setWorkers(data.workers || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch workers:', error);
+      setError('Failed to load workers');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const syncFromWordPress = useCallback(async (silent = false) => {
+    setSyncing(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const res = await fetch('/api/wordpress/sync', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        await fetchWorkers();
+        if (!silent) {
+          setSuccess(`Synced ${data.total || 0} employees from WordPress. Added ${data.added || 0} new, updated ${data.updated || 0}.`);
+        }
+      } else {
+        setError(data.error || 'Failed to sync from WordPress. Check your environment variables (WORDPRESS_USERNAME and WORDPRESS_APP_PASSWORD) are set correctly in your server settings.');
+      }
+    } catch (error) {
+      console.error('Failed to sync from WordPress:', error);
+      setError('Failed to sync from WordPress. Check your connection and credentials.');
+    } finally {
+      setSyncing(false);
+    }
+  }, [fetchWorkers]);
+
   useEffect(() => {
     const loadData = async () => {
       await fetchWorkers();
@@ -63,21 +101,6 @@ export default function WorkersPage() {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [syncFromWordPress, syncing]);
 
-  const fetchWorkers = useCallback(async () => {
-    try {
-      const res = await fetch('/api/workers');
-      const data = await res.json();
-      if (data.success) {
-        setWorkers(data.workers || []);
-      }
-    } catch (error) {
-      console.error('Failed to fetch workers:', error);
-      setError('Failed to load workers');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   const syncAllWorkers = async () => {
     setSyncing(true);
     setError(null);
@@ -100,29 +123,6 @@ export default function WorkersPage() {
       setSyncing(false);
     }
   };
-
-  const syncFromWordPress = useCallback(async (silent = false) => {
-    setSyncing(true);
-    setError(null);
-    setSuccess(null);
-    try {
-      const res = await fetch('/api/wordpress/sync', { method: 'POST' });
-      const data = await res.json();
-      if (data.success) {
-        await fetchWorkers();
-        if (!silent) {
-          setSuccess(`Synced ${data.total || 0} employees from WordPress. Added ${data.added || 0} new, updated ${data.updated || 0}.`);
-        }
-      } else {
-        setError(data.error || 'Failed to sync from WordPress. Check your environment variables (WORDPRESS_USERNAME and WORDPRESS_APP_PASSWORD) are set correctly in your server settings.');
-      }
-    } catch (error) {
-      console.error('Failed to sync from WordPress:', error);
-      setError('Failed to sync from WordPress. Check your connection and credentials.');
-    } finally {
-      setSyncing(false);
-    }
-  }, []);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
