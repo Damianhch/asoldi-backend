@@ -68,10 +68,11 @@ export function addOrUpdateWorkerByEmail(workerData: {
   const existing = getWorkerByEmail(workerData.email);
   
   if (existing) {
-    // Update existing worker
+    // Update existing worker - PRESERVE all existing data (checklist, notes, stats, etc.)
     return updateWorker(existing.id, {
       name: workerData.name,
-      wordpressId: workerData.wordpressId,
+      wordpressId: workerData.wordpressId || existing.wordpressId,
+      // Keep all existing data - don't overwrite checklist, notes, stats, paymentInfo, etc.
     }) as Worker;
   }
   

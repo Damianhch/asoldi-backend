@@ -1,14 +1,27 @@
 import { NextResponse } from 'next/server';
 import { syncWordPressEmployees, testWordPressConnection } from '@/lib/wordpress';
-import { addOrUpdateWorkerByEmail, getWorkers } from '@/lib/data';
+import { addOrUpdateWorkerByEmail, getWorkers, deleteWorker } from '@/lib/data';
 
 export async function POST() {
   try {
     // Check if WordPress credentials are configured
-    if (!process.env.WORDPRESS_USERNAME || !process.env.WORDPRESS_APP_PASSWORD) {
+    const username = process.env.WORDPRESS_USERNAME;
+    const password = process.env.WORDPRESS_APP_PASSWORD;
+    const url = process.env.WORDPRESS_URL;
+    
+    console.log('WordPress Config Check:', {
+      hasUrl: !!url,
+      hasUsername: !!username,
+      hasPassword: !!password,
+      urlLength: url?.length || 0,
+      usernameLength: username?.length || 0,
+      passwordLength: password?.length || 0,
+    });
+    
+    if (!username || !password) {
       return NextResponse.json({
         success: false,
-        error: 'WordPress credentials not configured. Please set WORDPRESS_USERNAME and WORDPRESS_APP_PASSWORD as environment variables in your server settings (Hostinger: Node.js app → Environment Variables).',
+        error: `WordPress credentials not configured. Missing: ${!username ? 'WORDPRESS_USERNAME' : ''} ${!password ? 'WORDPRESS_APP_PASSWORD' : ''}. Please set these as environment variables in Hostinger (Node.js app → Environment Variables) and restart the server.`,
       }, { status: 400 });
     }
 
@@ -39,11 +52,15 @@ export async function POST() {
       }, { status: 400 });
     }
 
+    const existingWorkers = getWorkers();
+    const wordpressEmails = new Set(syncResult.employees.map(e => e.email.toLowerCase()));
+    
     let added = 0;
     let updated = 0;
+    let removed = 0;
 
+    // Add or update workers from WordPress
     for (const employee of syncResult.employees) {
-      const existingWorkers = getWorkers();
       const exists = existingWorkers.some(w => w.email.toLowerCase() === employee.email.toLowerCase());
       
       addOrUpdateWorkerByEmail({
@@ -60,11 +77,20 @@ export async function POST() {
       }
     }
 
+    // Remove workers that are no longer in WordPress (only if they have a wordpressId)
+    for (const worker of existingWorkers) {
+      if (worker.wordpressId && !wordpressEmails.has(worker.email.toLowerCase())) {
+        deleteWorker(worker.id);
+        removed++;
+      }
+    }
+
     return NextResponse.json({
       success: true,
-      message: `Synced ${syncResult.synced} employees from WordPress. Added ${added} new, updated ${updated}.`,
+      message: `Synced ${syncResult.synced} employees from WordPress. Added ${added} new, updated ${updated}, removed ${removed}.`,
       added,
       updated,
+      removed,
       total: syncResult.synced,
     });
   } catch (error) {
