@@ -217,16 +217,37 @@ export async function testWordPressConnection(): Promise<boolean> {
   try {
     const config = getWordPressConfig();
     if (!config.username || !config.password) {
+      console.error('WordPress connection test failed: Missing credentials');
       return false;
     }
     
-    const response = await fetch(`${config.url}/wp-json/wp/v2/users/me`, {
+    const testUrl = `${config.url}/wp-json/wp/v2/users/me`;
+    console.log('Testing WordPress connection to:', testUrl);
+    
+    const response = await fetch(testUrl, {
       headers: {
         'Authorization': getAuthHeader(),
       },
     });
+    
+    console.log('WordPress connection test response:', {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok,
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Could not read error response');
+      console.error('WordPress connection test failed:', {
+        status: response.status,
+        statusText: response.statusText,
+        errorBody: errorText.substring(0, 200),
+      });
+    }
+    
     return response.ok;
-  } catch {
+  } catch (error) {
+    console.error('WordPress connection test exception:', error);
     return false;
   }
 }
