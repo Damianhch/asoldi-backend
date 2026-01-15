@@ -1,7 +1,41 @@
 import { Worker, DashboardStats, WorkerChecklist } from './types';
+import fs from 'fs';
+import path from 'path';
+
+// File-based persistence for workers data
+const DATA_FILE_PATH = path.join(process.cwd(), '.builds', 'data', 'workers.json');
 
 // In-memory data store - workers will be synced from WordPress
 let workers: Worker[] = [];
+
+// Load workers from file on startup
+function loadWorkersFromFile(): void {
+  try {
+    if (fs.existsSync(DATA_FILE_PATH)) {
+      const fileContent = fs.readFileSync(DATA_FILE_PATH, 'utf8');
+      workers = JSON.parse(fileContent);
+      console.log(`Loaded ${workers.length} workers from file: ${DATA_FILE_PATH}`);
+    }
+  } catch (error) {
+    console.log('No existing workers file found, starting fresh');
+  }
+}
+
+// Save workers to file
+function saveWorkersToFile(): void {
+  try {
+    const dir = path.dirname(DATA_FILE_PATH);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(DATA_FILE_PATH, JSON.stringify(workers, null, 2), 'utf8');
+  } catch (error) {
+    console.error('Failed to save workers to file:', error);
+  }
+}
+
+// Load on module init
+loadWorkersFromFile();
 
 // Default empty checklist (all unchecked)
 export const DEFAULT_CHECKLIST: WorkerChecklist = {
@@ -24,6 +58,7 @@ export function getWorkers(): Worker[] {
 
 export function setWorkers(newWorkers: Worker[]): void {
   workers = newWorkers;
+  saveWorkersToFile();
 }
 
 export function getWorkerById(id: string): Worker | undefined {
@@ -44,6 +79,7 @@ export function updateWorker(id: string, updates: Partial<Worker>): Worker | nul
     updatedAt: new Date().toISOString().split('T')[0],
   };
   
+  saveWorkersToFile();
   return workers[index];
 }
 
@@ -56,6 +92,7 @@ export function addWorker(worker: Omit<Worker, 'id' | 'createdAt' | 'updatedAt'>
   };
   
   workers.push(newWorker);
+  saveWorkersToFile();
   return newWorker;
 }
 
@@ -107,6 +144,7 @@ export function deleteWorker(id: string): boolean {
   if (index === -1) return false;
   
   workers.splice(index, 1);
+  saveWorkersToFile();
   return true;
 }
 
@@ -139,12 +177,14 @@ export function updateWorkerChecklist(
   const worker = getWorkerById(workerId);
   if (!worker) return null;
   
-  return updateWorker(workerId, {
+  const result = updateWorker(workerId, {
     checklist: {
       ...worker.checklist,
       [checklistKey]: value,
     },
   });
+  saveWorkersToFile();
+  return result;
 }
 
 export function addWorkerNote(workerId: string, content: string, createdBy: string): Worker | null {
@@ -158,9 +198,11 @@ export function addWorkerNote(workerId: string, content: string, createdBy: stri
     createdBy,
   };
   
-  return updateWorker(workerId, {
+  const result = updateWorker(workerId, {
     notes: [...worker.notes, newNote],
   });
+  saveWorkersToFile();
+  return result;
 }
 
 export function updateWorkerMyphonerStats(
@@ -172,12 +214,14 @@ export function updateWorkerMyphonerStats(
     conversionRate: number;
   }
 ): Worker | null {
-  return updateWorker(workerId, {
+  const result = updateWorker(workerId, {
     myphonerStats: {
       ...stats,
       lastSyncDate: new Date().toISOString().split('T')[0],
     },
   });
+  saveWorkersToFile();
+  return result;
 }
 
 // Helper functions

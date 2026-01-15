@@ -19,10 +19,10 @@ export async function POST() {
               if (match) {
                 let key = match[1].trim();
                 let value = match[2].trim();
-                if ((value.startsWith('"') && value.endsWith('"')) || 
-                    (value.startsWith("'") && value.endsWith("'"))) {
-                  value = value.slice(1, -1);
-                }
+                // Remove quotes more aggressively
+                value = value.replace(/^["']|["']$/g, '');
+                value = value.replace(/^\\"|\\"$/g, '');
+                value = value.trim();
                 if (!process.env[key]) {
                   process.env[key] = value;
                 }
@@ -42,11 +42,10 @@ export async function POST() {
       if (!value) return '';
       
       let cleaned = value.trim();
-      // Remove surrounding quotes if present
-      if ((cleaned.startsWith('"') && cleaned.endsWith('"')) || 
-          (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
-        cleaned = cleaned.slice(1, -1);
-      }
+      // Remove surrounding quotes if present (including escaped)
+      cleaned = cleaned.replace(/^["']|["']$/g, '');
+      cleaned = cleaned.replace(/^\\"|\\"$/g, '');
+      cleaned = cleaned.replace(/^\\'|\\'$/g, '');
       
       return cleaned.trim();
     };

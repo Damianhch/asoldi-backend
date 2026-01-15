@@ -18,10 +18,10 @@ function loadEnvFileIfNeeded() {
             if (match) {
               let key = match[1].trim();
               let value = match[2].trim();
-              if ((value.startsWith('"') && value.endsWith('"')) || 
-                  (value.startsWith("'") && value.endsWith("'"))) {
-                value = value.slice(1, -1);
-              }
+              // Remove quotes more aggressively - handle escaped quotes too
+              value = value.replace(/^["']|["']$/g, ''); // Remove surrounding quotes
+              value = value.replace(/^\\"|\\"$/g, ''); // Remove escaped quotes
+              value = value.trim();
               if (!process.env[key]) {
                 process.env[key] = value;
               }
@@ -45,12 +45,12 @@ function getWordPressConfig() {
     const value = process.env[key];
     if (!value) return defaultValue;
     
-    // Remove surrounding quotes if present (single or double)
+    // Remove surrounding quotes if present (single or double, including escaped)
     let cleaned = value.trim();
-    if ((cleaned.startsWith('"') && cleaned.endsWith('"')) || 
-        (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
-      cleaned = cleaned.slice(1, -1);
-    }
+    // Remove quotes more aggressively
+    cleaned = cleaned.replace(/^["']|["']$/g, '');
+    cleaned = cleaned.replace(/^\\"|\\"$/g, '');
+    cleaned = cleaned.replace(/^\\'|\\'$/g, '');
     
     return cleaned.trim();
   };
