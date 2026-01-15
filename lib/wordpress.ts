@@ -1,9 +1,46 @@
 // WordPress REST API Integration
 // Syncs users with 'employee' role from your WordPress site
 
+// Load .env file if variables not in process.env (fallback for Hostinger)
+function loadEnvFileIfNeeded() {
+  // Only load if WordPress vars are missing
+  if (!process.env.WORDPRESS_USERNAME || !process.env.WORDPRESS_APP_PASSWORD) {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const envPath = path.join(process.cwd(), '.builds', 'config', '.env');
+      if (fs.existsSync(envPath)) {
+        const envContent = fs.readFileSync(envPath, 'utf8');
+        envContent.split(/\r?\n/).forEach((line: string) => {
+          const trimmed = line.trim();
+          if (trimmed && !trimmed.startsWith('#')) {
+            const match = trimmed.match(/^([^=]+)=(.*)$/);
+            if (match) {
+              let key = match[1].trim();
+              let value = match[2].trim();
+              if ((value.startsWith('"') && value.endsWith('"')) || 
+                  (value.startsWith("'") && value.endsWith("'"))) {
+                value = value.slice(1, -1);
+              }
+              if (!process.env[key]) {
+                process.env[key] = value;
+              }
+            }
+          }
+        });
+      }
+    } catch (error) {
+      // Ignore errors
+    }
+  }
+}
+
 // Read environment variables at runtime, not at module load time
 // Handles quoted values and trims whitespace
 function getWordPressConfig() {
+  // Try to load .env file if needed
+  loadEnvFileIfNeeded();
+  
   const getEnv = (key: string, defaultValue = ''): string => {
     const value = process.env[key];
     if (!value) return defaultValue;
