@@ -32,6 +32,37 @@ export async function GET() {
     JWT_SECRET: process.env.JWT_SECRET ? 'SET' : 'NOT SET',
     ADMIN_USERNAME: process.env.ADMIN_USERNAME ? 'SET' : 'NOT SET',
   };
+
+  // Try to load .env file directly in API route as fallback
+  let envFileLoaded = false;
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const envPath = path.join(process.cwd(), '.builds', 'config', '.env');
+    if (fs.existsSync(envPath)) {
+      const envContent = fs.readFileSync(envPath, 'utf8');
+      envContent.split(/\r?\n/).forEach((line: string) => {
+        const trimmed = line.trim();
+        if (trimmed && !trimmed.startsWith('#')) {
+          const match = trimmed.match(/^([^=]+)=(.*)$/);
+          if (match) {
+            let key = match[1].trim();
+            let value = match[2].trim();
+            if ((value.startsWith('"') && value.endsWith('"')) || 
+                (value.startsWith("'") && value.endsWith("'"))) {
+              value = value.slice(1, -1);
+            }
+            if (!process.env[key]) {
+              process.env[key] = value;
+              envFileLoaded = true;
+            }
+          }
+        }
+      });
+    }
+  } catch (error: any) {
+    // Ignore errors
+  }
   
   return NextResponse.json({
     configured: {
