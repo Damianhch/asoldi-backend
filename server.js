@@ -7,43 +7,70 @@ const path = require('path');
 
 // Load .env file if it exists (for Hostinger)
 // Hostinger stores .env file at: public_html/builds/config/.env
+console.log('=== Environment Variable Loader ===');
+console.log('Current working directory:', process.cwd());
+console.log('__dirname:', __dirname);
+
 // Try multiple possible locations
 const envPaths = [
   path.join(process.cwd(), '.env'),
   path.join(process.cwd(), 'builds', 'config', '.env'),
   path.join(process.cwd(), '..', 'builds', 'config', '.env'),
+  path.join(process.cwd(), '..', '..', 'builds', 'config', '.env'),
+  path.join(__dirname, 'builds', 'config', '.env'),
+  path.join(__dirname, '..', 'builds', 'config', '.env'),
   '/home/u439392007/domains/admin.asoldi.com/public_html/builds/config/.env',
+  path.join(process.cwd(), 'public_html', 'builds', 'config', '.env'),
 ];
 
+let envFileFound = false;
+let envVarsLoaded = 0;
+
 for (const envPath of envPaths) {
-  if (fs.existsSync(envPath)) {
-    console.log(`Loading .env file from: ${envPath}`);
-    const envContent = fs.readFileSync(envPath, 'utf8');
-    envContent.split('\n').forEach(line => {
-      const trimmed = line.trim();
-      if (trimmed && !trimmed.startsWith('#')) {
-        const match = trimmed.match(/^([^=]+)=(.*)$/);
-        if (match) {
-          let key = match[1].trim();
-          let value = match[2].trim();
-          
-          // Remove surrounding quotes (single or double)
-          if ((value.startsWith('"') && value.endsWith('"')) || 
-              (value.startsWith("'") && value.endsWith("'"))) {
-            value = value.slice(1, -1);
-          }
-          
-          // Only set if not already in process.env
-          if (!process.env[key]) {
+  try {
+    if (fs.existsSync(envPath)) {
+      console.log(`✓ Found .env file at: ${envPath}`);
+      envFileFound = true;
+      const envContent = fs.readFileSync(envPath, 'utf8');
+      console.log(`File size: ${envContent.length} bytes`);
+      
+      envContent.split('\n').forEach((line, index) => {
+        const trimmed = line.trim();
+        if (trimmed && !trimmed.startsWith('#')) {
+          const match = trimmed.match(/^([^=]+)=(.*)$/);
+          if (match) {
+            let key = match[1].trim();
+            let value = match[2].trim();
+            
+            // Remove surrounding quotes (single or double)
+            if ((value.startsWith('"') && value.endsWith('"')) || 
+                (value.startsWith("'") && value.endsWith("'"))) {
+              value = value.slice(1, -1);
+            }
+            
+            // Always set (override if exists) for custom vars
             process.env[key] = value;
-            console.log(`Loaded ${key} from .env file`);
+            envVarsLoaded++;
+            console.log(`  Loaded: ${key} = ${value.substring(0, 20)}... (length: ${value.length})`);
           }
         }
-      }
-    });
-    break;
+      });
+      console.log(`Total variables loaded from .env: ${envVarsLoaded}`);
+      break;
+    } else {
+      console.log(`✗ Not found: ${envPath}`);
+    }
+  } catch (error) {
+    console.log(`✗ Error checking ${envPath}:`, error.message);
   }
 }
+
+if (!envFileFound) {
+  console.log('⚠ WARNING: .env file not found in any of the checked locations!');
+  console.log('Checked paths:', envPaths);
+}
+
+console.log('=== End Environment Variable Loader ===');
 
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = process.env.HOSTNAME || '0.0.0.0';
