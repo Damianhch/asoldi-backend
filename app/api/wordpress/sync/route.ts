@@ -4,31 +4,43 @@ import { addOrUpdateWorkerByEmail, getWorkers, deleteWorker } from '@/lib/data';
 
 export async function POST() {
   try {
-    // Load .env file if WordPress vars are missing (fallback for Hostinger)
+    // Load .env file if WordPress vars are missing (fallback for Hostinger and local dev)
     if (!process.env.WORDPRESS_USERNAME || !process.env.WORDPRESS_APP_PASSWORD) {
       try {
         const fs = require('fs');
         const path = require('path');
-        const envPath = path.join(process.cwd(), '.builds', 'config', '.env');
-        if (fs.existsSync(envPath)) {
-          const envContent = fs.readFileSync(envPath, 'utf8');
-          envContent.split(/\r?\n/).forEach((line: string) => {
-            const trimmed = line.trim();
-            if (trimmed && !trimmed.startsWith('#')) {
-              const match = trimmed.match(/^([^=]+)=(.*)$/);
-              if (match) {
-                let key = match[1].trim();
-                let value = match[2].trim();
-                // Remove quotes more aggressively
-                value = value.replace(/^["']|["']$/g, '');
-                value = value.replace(/^\\"|\\"$/g, '');
-                value = value.trim();
-                if (!process.env[key]) {
-                  process.env[key] = value;
+        
+        // Try multiple locations: root .env (local dev) and .builds/config/.env (Hostinger)
+        const envPaths = [
+          path.join(process.cwd(), '.env'), // Local development
+          path.join(process.cwd(), '.env.local'), // Next.js local override
+          path.join(process.cwd(), '.builds', 'config', '.env'), // Hostinger
+        ];
+        
+        for (const envPath of envPaths) {
+          if (fs.existsSync(envPath)) {
+            console.log(`Loading .env from: ${envPath}`);
+            const envContent = fs.readFileSync(envPath, 'utf8');
+            envContent.split(/\r?\n/).forEach((line: string) => {
+              const trimmed = line.trim();
+              if (trimmed && !trimmed.startsWith('#')) {
+                const match = trimmed.match(/^([^=]+)=(.*)$/);
+                if (match) {
+                  let key = match[1].trim();
+                  let value = match[2].trim();
+                  // Remove quotes more aggressively
+                  value = value.replace(/^["']|["']$/g, '');
+                  value = value.replace(/^\\"|\\"$/g, '');
+                  value = value.trim();
+                  if (!process.env[key]) {
+                    process.env[key] = value;
+                  }
                 }
               }
-            }
-          });
+            });
+            // Stop after first file found
+            break;
+          }
         }
       } catch (error) {
         // Ignore errors

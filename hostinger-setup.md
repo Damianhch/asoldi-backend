@@ -54,7 +54,12 @@ MYPHONER_CAMPAIGN_ID=
 WORDPRESS_URL=https://asoldi.com
 WORDPRESS_USERNAME=
 WORDPRESS_APP_PASSWORD=
+
+# IMPORTANT: DO NOT set WORDPRESS_MOCK_MODE in production
+# Mock mode is only for local testing (see LOCAL-TESTING-GUIDE.md)
 ```
+
+**Note:** WordPress sync is now **manual-only** to save resources. Click the "Sync WordPress" button in the Workers page when you need to sync. Auto-sync has been disabled to prevent resource exhaustion.
 
 ### Step 6: Deploy
 

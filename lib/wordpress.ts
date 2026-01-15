@@ -1,33 +1,45 @@
 // WordPress REST API Integration
 // Syncs users with 'employee' role from your WordPress site
 
-// Load .env file if variables not in process.env (fallback for Hostinger)
+// Load .env file if variables not in process.env (fallback for Hostinger and local dev)
 function loadEnvFileIfNeeded() {
   // Only load if WordPress vars are missing
   if (!process.env.WORDPRESS_USERNAME || !process.env.WORDPRESS_APP_PASSWORD) {
     try {
       const fs = require('fs');
       const path = require('path');
-      const envPath = path.join(process.cwd(), '.builds', 'config', '.env');
-      if (fs.existsSync(envPath)) {
-        const envContent = fs.readFileSync(envPath, 'utf8');
-        envContent.split(/\r?\n/).forEach((line: string) => {
-          const trimmed = line.trim();
-          if (trimmed && !trimmed.startsWith('#')) {
-            const match = trimmed.match(/^([^=]+)=(.*)$/);
-            if (match) {
-              let key = match[1].trim();
-              let value = match[2].trim();
-              // Remove quotes more aggressively - handle escaped quotes too
-              value = value.replace(/^["']|["']$/g, ''); // Remove surrounding quotes
-              value = value.replace(/^\\"|\\"$/g, ''); // Remove escaped quotes
-              value = value.trim();
-              if (!process.env[key]) {
-                process.env[key] = value;
+      
+      // Try multiple locations: root .env (local dev) and .builds/config/.env (Hostinger)
+      const envPaths = [
+        path.join(process.cwd(), '.env'), // Local development
+        path.join(process.cwd(), '.env.local'), // Next.js local override
+        path.join(process.cwd(), '.builds', 'config', '.env'), // Hostinger
+      ];
+      
+      for (const envPath of envPaths) {
+        if (fs.existsSync(envPath)) {
+          console.log(`Loading .env from: ${envPath}`);
+          const envContent = fs.readFileSync(envPath, 'utf8');
+          envContent.split(/\r?\n/).forEach((line: string) => {
+            const trimmed = line.trim();
+            if (trimmed && !trimmed.startsWith('#')) {
+              const match = trimmed.match(/^([^=]+)=(.*)$/);
+              if (match) {
+                let key = match[1].trim();
+                let value = match[2].trim();
+                // Remove quotes more aggressively - handle escaped quotes too
+                value = value.replace(/^["']|["']$/g, ''); // Remove surrounding quotes
+                value = value.replace(/^\\"|\\"$/g, ''); // Remove escaped quotes
+                value = value.trim();
+                if (!process.env[key]) {
+                  process.env[key] = value;
+                }
               }
             }
-          }
-        });
+          });
+          // Stop after first file found
+          break;
+        }
       }
     } catch (error) {
       // Ignore errors
@@ -37,7 +49,7 @@ function loadEnvFileIfNeeded() {
 
 // Read environment variables at runtime, not at module load time
 // Handles quoted values and trims whitespace
-function getWordPressConfig() {
+export function getWordPressConfig() {
   // Try to load .env file if needed
   loadEnvFileIfNeeded();
   
@@ -222,7 +234,9 @@ export async function testWordPressConnection(): Promise<boolean> {
     }
     
     const testUrl = `${config.url}/wp-json/wp/v2/users/me`;
-    console.log('Testing WordPress connection to:', testUrl);
+    console.log('🔍 Testing WordPress connection to:', testUrl);
+    console.log('🔍 Using username:', config.username);
+    console.log('🔍 Password length:', config.password.length);
     
     const response = await fetch(testUrl, {
       headers: {
@@ -230,24 +244,40 @@ export async function testWordPressConnection(): Promise<boolean> {
       },
     });
     
+    const responseText = await response.text().catch(() => 'Could not read response');
+    
     console.log('WordPress connection test response:', {
       status: response.status,
       statusText: response.statusText,
       ok: response.ok,
+      url: testUrl,
+      errorBody: responseText.substring(0, 500),
     });
     
     if (!response.ok) {
-      const errorText = await response.text().catch(() => 'Could not read error response');
-      console.error('WordPress connection test failed:', {
+      console.error('❌ WordPress connection test failed:', {
         status: response.status,
         statusText: response.statusText,
-        errorBody: errorText.substring(0, 200),
+        url: testUrl,
+        errorBody: responseText.substring(0, 500),
       });
+      
+      // Try to parse error as JSON
+      try {
+        const errorJson = JSON.parse(responseText);
+        console.error('WordPress error details:', errorJson);
+      } catch {
+        // Not JSON, that's fine
+      }
     }
     
     return response.ok;
   } catch (error) {
-    console.error('WordPress connection test exception:', error);
+    console.error('❌ WordPress connection test exception:', error);
+    if (error instanceof Error) {
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    }
     return false;
   }
 }

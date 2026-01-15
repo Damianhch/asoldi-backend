@@ -1,0 +1,224 @@
+[
+  {
+    "name": "Benjamin",
+    "email": "holenbenjamin@gmail.com",
+    "wordpressId": 9,
+    "role": "caller",
+    "status": "active",
+    "startDate": "2026-01-15",
+    "checklist": {
+      "contractSent": false,
+      "contractSigned": false,
+      "oneWeekMeeting": false,
+      "twoWeekMeeting": false,
+      "monthlyReview": false,
+      "trainingCompleted": false,
+      "systemAccessGranted": false,
+      "welcomeEmailSent": false,
+      "bankDetailsReceived": false,
+      "taxFormReceived": false
+    },
+    "myphonerStats": {
+      "totalCalls": 0,
+      "meetingsBooked": 0,
+      "hoursCalled": 0,
+      "conversionRate": 0
+    },
+    "paymentInfo": {
+      "hourlyRate": 0,
+      "commissionPerMeeting": 0,
+      "totalOwed": 0,
+      "nextPayday": "2026-01-24",
+      "paymentMethod": "bank"
+    },
+    "notes": [],
+    "id": "1768478886721",
+    "createdAt": "2026-01-15",
+    "updatedAt": "2026-01-15"
+  },
+  {
+    "name": "Imran",
+    "email": "moshirnxy@gmail.com",
+    "wordpressId": 5,
+    "role": "caller",
+    "status": "active",
+    "startDate": "2026-01-15",
+    "checklist": {
+      "contractSent": false,
+      "contractSigned": false,
+      "oneWeekMeeting": false,
+      "twoWeekMeeting": false,
+      "monthlyReview": false,
+      "trainingCompleted": false,
+      "systemAccessGranted": false,
+      "welcomeEmailSent": false,
+      "bankDetailsReceived": false,
+      "taxFormReceived": false
+    },
+    "myphonerStats": {
+      "totalCalls": 0,
+      "meetingsBooked": 0,
+      "hoursCalled": 0,
+      "conversionRate": 0
+    },
+    "paymentInfo": {
+      "hourlyRate": 0,
+      "commissionPerMeeting": 0,
+      "totalOwed": 0,
+      "nextPayday": "2026-01-24",
+      "paymentMethod": "bank"
+    },
+    "notes": [],
+    "id": "1768478886729",
+    "createdAt": "2026-01-15",
+    "updatedAt": "2026-01-15"
+  },
+  {
+    "name": "Kebron",
+    "email": "kebron.zerie@gmail.com",
+    "wordpressId": 8,
+    "role": "caller",
+    "status": "active",
+    "startDate": "2026-01-15",
+    "checklist": {
+      "contractSent": false,
+      "contractSigned": false,
+      "oneWeekMeeting": false,
+      "twoWeekMeeting": false,
+      "monthlyReview": false,
+      "trainingCompleted": false,
+      "systemAccessGranted": false,
+      "welcomeEmailSent": false,
+      "bankDetailsReceived": false,
+      "taxFormReceived": false
+    },
+    "myphonerStats": {
+      "totalCalls": 0,
+      "meetingsBooked": 0,
+      "hoursCalled": 0,
+      "conversionRate": 0
+    },
+    "paymentInfo": {
+      "hourlyRate": 0,
+      "commissionPerMeeting": 0,
+      "totalOwed": 0,
+      "nextPayday": "2026-01-24",
+      "paymentMethod": "bank"
+    },
+    "notes": [],
+    "id": "1768478886731",
+    "createdAt": "2026-01-15",
+    "updatedAt": "2026-01-15"
+  },
+  {
+    "name": "Linus",
+    "email": "linus.m.lunde@gmail.com",
+    "wordpressId": 6,
+    "role": "caller",
+    "status": "active",
+    "startDate": "2026-01-15",
+    "checklist": {
+      "contractSent": false,
+      "contractSigned": false,
+      "oneWeekMeeting": false,
+      "twoWeekMeeting": false,
+      "monthlyReview": false,
+      "trainingCompleted": false,
+      "systemAccessGranted": false,
+      "welcomeEmailSent": false,
+      "bankDetailsReceived": false,
+      "taxFormReceived": false
+    },
+    "myphonerStats": {
+      "totalCalls": 0,
+      "meetingsBooked": 0,
+      "hoursCalled": 0,
+      "conversionRate": 0
+    },
+    "paymentInfo": {
+      "hourlyRate": 0,
+      "commissionPerMeeting": 0,
+      "totalOwed": 0,
+      "nextPayday": "2026-01-24",
+      "paymentMethod": "bank"
+    },
+    "notes": [],
+    "id": "1768478886734",
+    "createdAt": "2026-01-15",
+    "updatedAt": "2026-01-15"
+  },
+  {
+    "name": "Mats",
+    "email": "Mats_rimereit@mailbox.com",
+    "wordpressId": 3,
+    "role": "caller",
+    "status": "active",
+    "startDate": "2026-01-15",
+    "checklist": {
+      "contractSent": false,
+      "contractSigned": false,
+      "oneWeekMeeting": false,
+      "twoWeekMeeting": false,
+      "monthlyReview": false,
+      "trainingCompleted": false,
+      "systemAccessGranted": false,
+      "welcomeEmailSent": false,
+      "bankDetailsReceived": false,
+      "taxFormReceived": false
+    },
+    "myphonerStats": {
+      "totalCalls": 0,
+      "meetingsBooked": 0,
+      "hoursCalled": 0,
+      "conversionRate": 0
+    },
+    "paymentInfo": {
+      "hourlyRate": 0,
+      "commissionPerMeeting": 0,
+      "totalOwed": 0,
+      "nextPayday": "2026-01-24",
+      "paymentMethod": "bank"
+    },
+    "notes": [],
+    "id": "1768478886736",
+    "createdAt": "2026-01-15",
+    "updatedAt": "2026-01-15"
+  },
+  {
+    "name": "William",
+    "email": "william.b.johnsen@gmail.com",
+    "wordpressId": 7,
+    "role": "caller",
+    "status": "active",
+    "startDate": "2026-01-15",
+    "checklist": {
+      "contractSent": false,
+      "contractSigned": false,
+      "oneWeekMeeting": false,
+      "twoWeekMeeting": false,
+      "monthlyReview": false,
+      "trainingCompleted": false,
+      "systemAccessGranted": false,
+      "welcomeEmailSent": false,
+      "bankDetailsReceived": false,
+      "taxFormReceived": false
+    },
+    "myphonerStats": {
+      "totalCalls": 0,
+      "meetingsBooked": 0,
+      "hoursCalled": 0,
+      "conversionRate": 0
+    },
+    "paymentInfo": {
+      "hourlyRate": 0,
+      "commissionPerMeeting": 0,
+      "totalOwed": 0,
+      "nextPayday": "2026-01-24",
+      "paymentMethod": "bank"
+    },
+    "notes": [],
+    "id": "1768478886737",
+    "createdAt": "2026-01-15",
+    "updatedAt": "2026-01-15"
+  }
+]
