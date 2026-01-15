@@ -85,6 +85,15 @@ function getAuthHeader(): string {
     throw new Error('WordPress credentials not configured');
   }
   
+  // Debug logging
+  console.log('WordPress Auth Config:', {
+    url: config.url,
+    usernameLength: config.username.length,
+    passwordLength: config.password.length,
+    usernameFirstChars: config.username.substring(0, 10),
+    passwordFirstChars: config.password.substring(0, 10),
+  });
+  
   const credentials = Buffer.from(`${config.username}:${config.password}`).toString('base64');
   return `Basic ${credentials}`;
 }
@@ -112,6 +121,13 @@ async function wpFetch<T>(
 
     const url = `${config.url}/wp-json/wp/v2${endpoint}`;
     console.log('WordPress API Request:', url);
+    console.log('Using config:', {
+      url: config.url,
+      hasUsername: !!config.username,
+      hasPassword: !!config.password,
+      usernameLength: config.username?.length || 0,
+      passwordLength: config.password?.length || 0,
+    });
     
     const response = await fetch(url, {
       ...options,
