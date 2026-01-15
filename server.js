@@ -32,9 +32,12 @@ for (const envPath of envPaths) {
       const envContent = fs.readFileSync(envPath, 'utf8');
       console.log(`File size: ${envContent.length} bytes`);
       
-      envContent.split('\n').forEach((line, index) => {
+      // Split by newline and process each line
+      const lines = envContent.split(/\r?\n/);
+      lines.forEach((line, index) => {
         const trimmed = line.trim();
         if (trimmed && !trimmed.startsWith('#')) {
+          // Match KEY='value' or KEY="value" or KEY=value
           const match = trimmed.match(/^([^=]+)=(.*)$/);
           if (match) {
             let key = match[1].trim();
@@ -47,9 +50,10 @@ for (const envPath of envPaths) {
             }
             
             // Always set (override if exists) for custom vars
+            // This ensures variables are available to Next.js
             process.env[key] = value;
             envVarsLoaded++;
-            console.log(`  Loaded: ${key} = ${value.substring(0, 20)}... (length: ${value.length})`);
+            console.log(`  Loaded: ${key} = ${value.substring(0, Math.min(20, value.length))}... (length: ${value.length})`);
           }
         }
       });
@@ -66,6 +70,14 @@ for (const envPath of envPaths) {
 if (!envFileFound) {
   console.log('⚠ WARNING: .env file not found in any of the checked locations!');
   console.log('Checked paths:', envPaths);
+} else {
+  // Verify critical vars are loaded
+  console.log('Verifying loaded variables:');
+  console.log('  WORDPRESS_URL:', process.env.WORDPRESS_URL ? `SET (${process.env.WORDPRESS_URL})` : 'NOT SET');
+  console.log('  WORDPRESS_USERNAME:', process.env.WORDPRESS_USERNAME ? `SET (${process.env.WORDPRESS_USERNAME.substring(0, 10)}...)` : 'NOT SET');
+  console.log('  WORDPRESS_APP_PASSWORD:', process.env.WORDPRESS_APP_PASSWORD ? `SET (length: ${process.env.WORDPRESS_APP_PASSWORD.length})` : 'NOT SET');
+  console.log('  JWT_SECRET:', process.env.JWT_SECRET ? 'SET' : 'NOT SET');
+  console.log('  ADMIN_USERNAME:', process.env.ADMIN_USERNAME ? `SET (${process.env.ADMIN_USERNAME})` : 'NOT SET');
 }
 
 console.log('=== End Environment Variable Loader ===');
