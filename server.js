@@ -12,15 +12,13 @@ console.log('Current working directory:', process.cwd());
 console.log('__dirname:', __dirname);
 
 // Try multiple possible locations
+// NOTE: Hostinger uses .builds (with dot) not builds!
 const envPaths = [
   path.join(process.cwd(), '.env'),
+  path.join(process.cwd(), '.builds', 'config', '.env'), // THIS IS THE CORRECT PATH!
   path.join(process.cwd(), 'builds', 'config', '.env'),
-  path.join(process.cwd(), '..', 'builds', 'config', '.env'),
-  path.join(process.cwd(), '..', '..', 'builds', 'config', '.env'),
-  path.join(__dirname, 'builds', 'config', '.env'),
-  path.join(__dirname, '..', 'builds', 'config', '.env'),
-  '/home/u439392007/domains/admin.asoldi.com/public_html/builds/config/.env',
-  path.join(process.cwd(), 'public_html', 'builds', 'config', '.env'),
+  path.join(process.cwd(), '..', '.builds', 'config', '.env'),
+  '/home/u439392007/domains/admin.asoldi.com/public_html/.builds/config/.env',
 ];
 
 let envFileFound = false;
