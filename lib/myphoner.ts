@@ -286,7 +286,7 @@ export async function getAgents(): Promise<MyphonerResponse<MyphonerAgent[]>> {
           if (!agentMap.has(claimedBy)) {
             agentMap.set(claimedBy, {
               id: agentId || 0,
-              name: agentEmail.split('@')[0] || `Agent ${key}`,
+              name: agentEmail.split('@')[0] || `Agent ${claimedBy}`,
               email: agentEmail,
               phone: undefined,
             });
