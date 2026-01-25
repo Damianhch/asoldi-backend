@@ -134,6 +134,7 @@ export async function POST() {
         email: employee.email,
         wordpressId: employee.wordpressId,
         role: 'caller',
+        wordpressCreatedAt: employee.wordpressCreatedAt,
       });
       
       if (exists) {

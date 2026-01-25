@@ -146,11 +146,11 @@ export default function DashboardPage() {
           delay={200}
         />
         <StatCard
-          title="Days Until Payday"
-          value={stats?.daysUntilPayday || 0}
-          subtitle="25th of the month"
+          title={stats?.isOverdue ? "Payment Overdue" : "Days Until Payday"}
+          value={stats?.isOverdue ? "!" : (stats?.daysUntilPayday || 0)}
+          subtitle={stats?.isOverdue ? "Payment pending" : "1st of next month"}
           iconName="credit-card"
-          color="blue"
+          color={stats?.isOverdue ? "red" : "blue"}
           delay={300}
         />
       </div>
@@ -276,15 +276,6 @@ export default function DashboardPage() {
             <Users className="w-8 h-8 text-dark-400 group-hover:text-asoldi-400 transition-colors" />
             <span className="text-sm font-medium text-dark-300 group-hover:text-white transition-colors">
               View Workers
-            </span>
-          </Link>
-          <Link
-            href="/dashboard/myphoner"
-            className="flex flex-col items-center gap-3 p-6 rounded-xl bg-dark-900/50 hover:bg-dark-800/50 border border-dark-700 hover:border-blue-500/50 transition-all group"
-          >
-            <Phone className="w-8 h-8 text-dark-400 group-hover:text-blue-400 transition-colors" />
-            <span className="text-sm font-medium text-dark-300 group-hover:text-white transition-colors">
-              MyPhoner Stats
             </span>
           </Link>
           <Link

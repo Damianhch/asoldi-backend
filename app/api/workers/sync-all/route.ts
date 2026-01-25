@@ -16,17 +16,27 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
-      const result = await getAgentStatsByEmail(worker.email, interval);
+      try {
+        const result = await getAgentStatsByEmail(worker.email, interval);
 
-      if (result) {
-        updateWorkerMyphonerStats(worker.id, result.stats);
-        results.push({ id: worker.id, name: worker.name, synced: true });
-      } else {
+        if (result) {
+          updateWorkerMyphonerStats(worker.id, result.stats);
+          results.push({ id: worker.id, name: worker.name, synced: true });
+        } else {
+          results.push({ 
+            id: worker.id, 
+            name: worker.name, 
+            synced: false, 
+            error: 'Agent not found in MyPhoner or no data available' 
+          });
+        }
+      } catch (error) {
+        console.error(`Error syncing worker ${worker.name} (${worker.email}):`, error);
         results.push({ 
           id: worker.id, 
           name: worker.name, 
           synced: false, 
-          error: 'Agent not found in MyPhoner' 
+          error: error instanceof Error ? error.message : 'Unknown error' 
         });
       }
     }

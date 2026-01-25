@@ -288,12 +288,14 @@ export function wpUserToWorkerData(wpUser: WordPressUser): {
   email: string;
   wordpressId: number;
   role: 'caller' | 'admin' | 'other';
+  wordpressCreatedAt?: string;
 } {
   return {
     name: wpUser.name || wpUser.username,
     email: wpUser.email,
     wordpressId: wpUser.id,
     role: 'caller', // All employees are callers by default
+    wordpressCreatedAt: wpUser.registered_date ? wpUser.registered_date.split('T')[0] : undefined,
   };
 }
 

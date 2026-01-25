@@ -14,6 +14,9 @@ import {
   RefreshCw,
   Loader2,
   X,
+  Grid3x3,
+  Table,
+  TrendingUp,
 } from 'lucide-react';
 import { Worker, TIME_INTERVALS, TimeInterval, WorkerChecklist } from '@/lib/types';
 
@@ -26,6 +29,7 @@ export default function WorkersPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
 
   const fetchWorkers = useCallback(async () => {
     try {
@@ -281,11 +285,36 @@ export default function WorkersPage() {
                 {status}
               </button>
             ))}
+            {/* View Toggle */}
+            <div className="flex gap-1 bg-dark-800 p-1 rounded-lg">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`p-2 rounded transition-all ${
+                  viewMode === 'grid'
+                    ? 'bg-asoldi-500 text-white'
+                    : 'text-dark-400 hover:text-white'
+                }`}
+                title="Grid View"
+              >
+                <Grid3x3 className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setViewMode('table')}
+                className={`p-2 rounded transition-all ${
+                  viewMode === 'table'
+                    ? 'bg-asoldi-500 text-white'
+                    : 'text-dark-400 hover:text-white'
+                }`}
+                title="Table View"
+              >
+                <Table className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Workers Grid */}
+      {/* Workers View - Grid or Table */}
       {filteredWorkers.length === 0 ? (
         <div className="glass-card p-12 text-center">
           <Users className="w-12 h-12 text-dark-500 mx-auto mb-4" />
@@ -310,7 +339,65 @@ export default function WorkersPage() {
             </button>
           )}
         </div>
+      ) : viewMode === 'table' ? (
+        /* Table View */
+        <div className="glass-card p-6 animate-slide-up">
+          <h2 className="text-xl font-semibold font-display text-white mb-6">
+            Agent Performance
+          </h2>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-dark-700">
+                  <th className="text-left py-4 px-4 text-dark-400 font-medium">Agent</th>
+                  <th className="text-center py-4 px-4 text-dark-400 font-medium">Meetings Booked</th>
+                  <th className="text-center py-4 px-4 text-dark-400 font-medium">Last Sync</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredWorkers
+                  .filter(w => w.role === 'caller' && w.status !== 'inactive')
+                  .map((worker) => (
+                    <tr key={worker.id} className="border-b border-dark-800 hover:bg-dark-900/50">
+                      <td className="py-4 px-4">
+                        <Link 
+                          href={`/dashboard/workers/${worker.id}`}
+                          className="flex items-center gap-3 hover:text-asoldi-400 transition-colors"
+                        >
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-asoldi-500 to-blue-500 flex items-center justify-center text-white font-semibold overflow-hidden">
+                            {worker.avatarUrl ? (
+                              <img 
+                                src={worker.avatarUrl} 
+                                alt={worker.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              worker.name.charAt(0)
+                            )}
+                          </div>
+                          <div>
+                            <p className="font-medium text-white">{worker.name}</p>
+                            <p className="text-sm text-dark-400">{worker.email}</p>
+                          </div>
+                        </Link>
+                      </td>
+                      <td className="text-center py-4 px-4 text-purple-400 font-medium text-lg">
+                        {worker.myphonerStats?.meetingsBooked || 0}
+                      </td>
+                      <td className="text-center py-4 px-4 text-dark-400 text-sm">
+                        {worker.myphonerStats?.lastSyncDate 
+                          ? new Date(worker.myphonerStats.lastSyncDate).toLocaleDateString()
+                          : 'N/A'}
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       ) : (
+        /* Grid View */
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {filteredWorkers.map((worker, index) => {
             const progress = getChecklistProgress(worker.checklist);
@@ -325,8 +412,16 @@ export default function WorkersPage() {
                 {/* Header */}
                 <div className="flex items-start justify-between mb-6">
                   <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-asoldi-500 to-blue-500 flex items-center justify-center text-white text-xl font-bold shadow-lg shadow-asoldi-500/25">
-                      {worker.name.charAt(0)}
+                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-asoldi-500 to-blue-500 flex items-center justify-center text-white text-xl font-bold shadow-lg shadow-asoldi-500/25 overflow-hidden">
+                      {worker.avatarUrl ? (
+                        <img 
+                          src={worker.avatarUrl} 
+                          alt={worker.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        worker.name.charAt(0)
+                      )}
                     </div>
                     <div>
                       <h3 className="text-lg font-semibold text-white group-hover:text-asoldi-400 transition-colors">
@@ -340,29 +435,13 @@ export default function WorkersPage() {
                   </span>
                 </div>
 
-                {/* Stats - Updated: Calls, Meetings, Hours Called */}
-                <div className="grid grid-cols-3 gap-4 mb-6">
-                  <div className="text-center p-3 rounded-xl bg-dark-900/50 border border-dark-800">
-                    <Phone className="w-5 h-5 text-blue-400 mx-auto mb-1" />
-                    <p className="text-lg font-bold text-white">
-                      {worker.myphonerStats?.totalCalls || 0}
-                    </p>
-                    <p className="text-xs text-dark-500">Calls</p>
-                  </div>
-                  <div className="text-center p-3 rounded-xl bg-dark-900/50 border border-dark-800">
-                    <Calendar className="w-5 h-5 text-purple-400 mx-auto mb-1" />
-                    <p className="text-lg font-bold text-white">
-                      {worker.myphonerStats?.meetingsBooked || 0}
-                    </p>
-                    <p className="text-xs text-dark-500">Meetings</p>
-                  </div>
-                  <div className="text-center p-3 rounded-xl bg-dark-900/50 border border-dark-800">
-                    <Clock className="w-5 h-5 text-amber-400 mx-auto mb-1" />
-                    <p className="text-lg font-bold text-white">
-                      {worker.myphonerStats?.hoursCalled?.toFixed(1) || '0.0'}
-                    </p>
-                    <p className="text-xs text-dark-500">Hours</p>
-                  </div>
+                {/* Stats - Meetings Booked */}
+                <div className="text-center p-4 rounded-xl bg-dark-900/50 border border-dark-800 mb-6">
+                  <Calendar className="w-6 h-6 text-purple-400 mx-auto mb-2" />
+                  <p className="text-2xl font-bold text-white">
+                    {worker.myphonerStats?.meetingsBooked || 0}
+                  </p>
+                  <p className="text-sm text-dark-400">Meetings Booked</p>
                 </div>
 
                 {/* Checklist Progress */}
@@ -394,13 +473,6 @@ export default function WorkersPage() {
                   </div>
                 </div>
 
-                {/* Conversion Rate */}
-                <div className="mt-4 pt-4 border-t border-dark-800 flex items-center justify-between">
-                  <span className="text-sm text-dark-400">Conversion Rate</span>
-                  <span className="text-lg font-bold text-asoldi-400">
-                    {worker.myphonerStats?.conversionRate || 0}%
-                  </span>
-                </div>
               </Link>
             );
           })}

@@ -47,11 +47,8 @@ function getNextPayday(): string {
   const today = new Date();
   const currentMonth = today.getMonth();
   const currentYear = today.getFullYear();
-  let nextPayday = new Date(currentYear, currentMonth, 25);
-  
-  if (today > nextPayday) {
-    nextPayday = new Date(currentYear, currentMonth + 1, 25);
-  }
+  // Payday is always the 1st of next month (for current month's earnings)
+  const nextPayday = new Date(currentYear, currentMonth + 1, 1);
   
   return nextPayday.toISOString().split('T')[0];
 }

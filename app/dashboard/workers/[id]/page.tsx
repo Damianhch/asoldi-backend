@@ -12,6 +12,9 @@ import {
   TrendingUp,
   RefreshCw,
   Loader2,
+  Edit,
+  Upload,
+  FileText,
 } from 'lucide-react';
 import WorkerChecklist from '@/components/WorkerChecklist';
 import WorkerNotes from '@/components/WorkerNotes';
@@ -25,6 +28,9 @@ export default function WorkerDetailPage() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [timeInterval, setTimeInterval] = useState<TimeInterval>('month');
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadingContract, setUploadingContract] = useState(false);
+  const [showImageEdit, setShowImageEdit] = useState(false);
 
   useEffect(() => {
     fetchWorker();
@@ -69,6 +75,55 @@ export default function WorkerDetailPage() {
     }
   };
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !worker) return;
+
+    setUploadingImage(true);
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+      const res = await fetch(`/api/workers/${id}/image`, {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.success && data.worker) {
+        setWorker(data.worker);
+      }
+    } catch (error) {
+      console.error('Failed to upload image:', error);
+    } finally {
+      setUploadingImage(false);
+      setShowImageEdit(false);
+    }
+  };
+
+  const handleContractUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !worker) return;
+
+    setUploadingContract(true);
+    const formData = new FormData();
+    formData.append('contract', file);
+
+    try {
+      const res = await fetch(`/api/workers/${id}/contract`, {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.success && data.worker) {
+        setWorker(data.worker);
+      }
+    } catch (error) {
+      console.error('Failed to upload contract:', error);
+    } finally {
+      setUploadingContract(false);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
@@ -86,13 +141,9 @@ export default function WorkerDetailPage() {
     contractSent: 'Contract Sent',
     contractSigned: 'Contract Signed',
     oneWeekMeeting: '1 Week Check-in Meeting',
-    twoWeekMeeting: '2 Week Check-in Meeting',
     monthlyReview: 'Monthly Review',
-    trainingCompleted: 'Training Completed',
     systemAccessGranted: 'System Access Granted',
-    welcomeEmailSent: 'Welcome Email Sent',
-    bankDetailsReceived: 'Bank Details Received',
-    taxFormReceived: 'Tax Form Received',
+    personalDetailsReceived: 'Personal Details Received',
   };
 
   if (loading) {
@@ -129,8 +180,39 @@ export default function WorkerDetailPage() {
       <div className="glass-card p-8 animate-slide-up">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="flex items-center gap-6">
-            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-asoldi-500 to-blue-500 flex items-center justify-center text-white text-3xl font-bold shadow-lg shadow-asoldi-500/25">
-              {worker.name.charAt(0)}
+            <div 
+              className="relative w-20 h-20 rounded-2xl bg-gradient-to-br from-asoldi-500 to-blue-500 flex items-center justify-center text-white text-3xl font-bold shadow-lg shadow-asoldi-500/25 overflow-hidden group cursor-pointer"
+              onMouseEnter={() => setShowImageEdit(true)}
+              onMouseLeave={() => setShowImageEdit(false)}
+            >
+              {worker.avatarUrl ? (
+                <img 
+                  src={worker.avatarUrl} 
+                  alt={worker.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span>{worker.name.charAt(0)}</span>
+              )}
+              {showImageEdit && (
+                <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                  <label className="cursor-pointer">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                      disabled={uploadingImage}
+                    />
+                    <Edit className="w-6 h-6 text-white" />
+                  </label>
+                </div>
+              )}
+              {uploadingImage && (
+                <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                  <Loader2 className="w-6 h-6 text-white animate-spin" />
+                </div>
+              )}
             </div>
             <div>
               <div className="flex items-center gap-3 mb-2">
@@ -150,6 +232,32 @@ export default function WorkerDetailPage() {
                   <Calendar className="w-4 h-4" />
                   Started {worker.startDate}
                 </span>
+                {worker.contractUrl && (
+                  <a
+                    href={worker.contractUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-asoldi-400 hover:text-asoldi-300 transition-colors"
+                  >
+                    <FileText className="w-4 h-4" />
+                    View Contract
+                  </a>
+                )}
+                <label className="flex items-center gap-2 text-asoldi-400 hover:text-asoldi-300 transition-colors cursor-pointer">
+                  <input
+                    type="file"
+                    accept="application/pdf"
+                    onChange={handleContractUpload}
+                    className="hidden"
+                    disabled={uploadingContract}
+                  />
+                  {uploadingContract ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Upload className="w-4 h-4" />
+                  )}
+                  {worker.contractUrl ? 'Update Contract' : 'Upload Contract'}
+                </label>
               </div>
             </div>
           </div>
@@ -190,36 +298,13 @@ export default function WorkerDetailPage() {
         </div>
       </div>
 
-      {/* Stats Row - Updated: Total Calls, Meetings Booked, Hours Called, Conversion Rate */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="glass-card p-6 text-center animate-slide-up" style={{ animationDelay: '100ms' }}>
-          <Phone className="w-8 h-8 text-blue-400 mx-auto mb-3" />
-          <p className="text-3xl font-bold text-white font-display">
-            {worker.myphonerStats?.totalCalls || 0}
-          </p>
-          <p className="text-sm text-dark-400">Total Calls</p>
-        </div>
-        <div className="glass-card p-6 text-center animate-slide-up" style={{ animationDelay: '200ms' }}>
-          <Calendar className="w-8 h-8 text-purple-400 mx-auto mb-3" />
-          <p className="text-3xl font-bold text-white font-display">
-            {worker.myphonerStats?.meetingsBooked || 0}
-          </p>
-          <p className="text-sm text-dark-400">Meetings Booked</p>
-        </div>
-        <div className="glass-card p-6 text-center animate-slide-up" style={{ animationDelay: '300ms' }}>
-          <Clock className="w-8 h-8 text-amber-400 mx-auto mb-3" />
-          <p className="text-3xl font-bold text-white font-display">
-            {worker.myphonerStats?.hoursCalled?.toFixed(1) || '0.0'}
-          </p>
-          <p className="text-sm text-dark-400">Hours Called</p>
-        </div>
-        <div className="glass-card p-6 text-center animate-slide-up" style={{ animationDelay: '400ms' }}>
-          <TrendingUp className="w-8 h-8 text-asoldi-400 mx-auto mb-3" />
-          <p className="text-3xl font-bold text-white font-display">
-            {worker.myphonerStats?.conversionRate || 0}%
-          </p>
-          <p className="text-sm text-dark-400">Conversion Rate</p>
-        </div>
+      {/* Stats Row - Meetings Booked */}
+      <div className="glass-card p-8 text-center animate-slide-up">
+        <Calendar className="w-12 h-12 text-purple-400 mx-auto mb-4" />
+        <p className="text-5xl font-bold text-white font-display">
+          {worker.myphonerStats?.meetingsBooked || 0}
+        </p>
+        <p className="text-lg text-dark-400 mt-2">Meetings Booked</p>
       </div>
 
       {/* Main Content Grid */}

@@ -7,7 +7,9 @@ export interface Worker {
   status: 'active' | 'inactive' | 'onboarding';
   startDate: string;
   avatarUrl?: string;
+  contractUrl?: string; // PDF contract file path
   wordpressId?: number; // WordPress user ID
+  wordpressCreatedAt?: string; // WordPress user creation date
   
   // Checklist items
   checklist: WorkerChecklist;
@@ -29,20 +31,13 @@ export interface WorkerChecklist {
   contractSent: boolean;
   contractSigned: boolean;
   oneWeekMeeting: boolean;
-  twoWeekMeeting: boolean;
   monthlyReview: boolean;
-  trainingCompleted: boolean;
   systemAccessGranted: boolean;
-  welcomeEmailSent: boolean;
-  bankDetailsReceived: boolean;
-  taxFormReceived: boolean;
+  personalDetailsReceived: boolean;
 }
 
 export interface MyphonerStats {
-  totalCalls: number;
-  meetingsBooked: number;
-  hoursCalled: number; // Hours called instead of winners
-  conversionRate: number; // Calls to meetings conversion
+  meetingsBooked: number; // Winners/meetings booked
   lastSyncDate?: string;
 }
 
@@ -71,6 +66,7 @@ export interface DashboardStats {
   totalHoursThisMonth: number;
   totalOwedThisMonth: number;
   daysUntilPayday: number;
+  isOverdue: boolean;
   pendingOnboarding: number;
 }
 
@@ -92,14 +88,14 @@ export interface AuthState {
   user: User | null;
 }
 
-// Time interval options
-export type TimeInterval = 'week' | 'month' | '2months' | '4months' | '6months' | 'year';
+// Time interval options - matching Myphoner's actual options
+export type TimeInterval = 'week' | 'month' | '3mth' | 'year' | 'thisyear';
 
+// Time intervals - matching Myphoner's review page options
 export const TIME_INTERVALS: { value: TimeInterval; label: string }[] = [
-  { value: 'week', label: 'Last Week' },
-  { value: 'month', label: 'Last Month' },
-  { value: '2months', label: 'Last 2 Months' },
-  { value: '4months', label: 'Last 4 Months' },
-  { value: '6months', label: 'Last 6 Months' },
-  { value: 'year', label: 'Last Year' },
+  { value: 'week', label: 'Last 7 Days' },
+  { value: 'month', label: '1 mth' },
+  { value: '3mth', label: '3 mth' },
+  { value: 'year', label: '1 yrs' },
+  { value: 'thisyear', label: 'This Year' },
 ];

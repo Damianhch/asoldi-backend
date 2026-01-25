@@ -38,7 +38,32 @@ export default function PaymentsPage() {
   };
 
   const activeWorkers = workers.filter(w => w.status !== 'inactive');
-  const totalOwed = activeWorkers.reduce((sum, w) => sum + (w.paymentInfo?.totalOwed || 0), 0);
+  
+  // Calculate total owed for current month
+  const calculateTotalOwed = (worker: Worker): number => {
+    if (!worker.paymentInfo || !worker.myphonerStats) return 0;
+    const hourlyRate = worker.paymentInfo.hourlyRate || 0;
+    const commissionPerMeeting = worker.paymentInfo.commissionPerMeeting || 0;
+    const hoursCalled = worker.myphonerStats.hoursCalled || 0;
+    const meetingsBooked = worker.myphonerStats.meetingsBooked || 0;
+    return (hoursCalled * hourlyRate) + (meetingsBooked * commissionPerMeeting);
+  };
+  
+  const totalOwed = activeWorkers.reduce((sum, w) => sum + calculateTotalOwed(w), 0);
+  
+  // Check if payment is overdue
+  const isOverdue = (lastPaymentDate?: string): boolean => {
+    if (!lastPaymentDate) {
+      const today = new Date();
+      return today.getDate() > 1;
+    }
+    const today = new Date();
+    const currentMonth = today.getMonth();
+    const currentYear = today.getFullYear();
+    const firstOfCurrentMonth = new Date(currentYear, currentMonth, 1);
+    const lastPayment = new Date(lastPaymentDate);
+    return today.getDate() > 1 && lastPayment < firstOfCurrentMonth;
+  };
 
   if (loading) {
     return (
@@ -96,10 +121,12 @@ export default function PaymentsPage() {
             <div>
               <p className="text-sm text-dark-400">Next Payday</p>
               <p className="text-3xl font-bold text-white font-display">
-                25th
+                1st
               </p>
-              <p className="text-sm text-dark-500">
-                {stats?.daysUntilPayday || 0} days remaining
+              <p className={`text-sm ${stats?.isOverdue ? 'text-red-400' : 'text-dark-500'}`}>
+                {stats?.isOverdue 
+                  ? 'Overdue' 
+                  : `${stats?.daysUntilPayday || 0} days remaining`}
               </p>
             </div>
           </div>
@@ -113,7 +140,7 @@ export default function PaymentsPage() {
             <div>
               <p className="text-sm text-dark-400">Workers to Pay</p>
               <p className="text-3xl font-bold text-white font-display">
-                {activeWorkers.filter(w => (w.paymentInfo?.totalOwed || 0) > 0).length}
+                {activeWorkers.filter(w => calculateTotalOwed(w) > 0).length}
               </p>
             </div>
           </div>
@@ -181,8 +208,16 @@ export default function PaymentsPage() {
                     <tr key={worker.id} className="border-b border-dark-800 hover:bg-dark-900/50">
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-asoldi-500 to-blue-500 flex items-center justify-center text-white font-semibold">
-                            {worker.name.charAt(0)}
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-asoldi-500 to-blue-500 flex items-center justify-center text-white font-semibold overflow-hidden">
+                            {worker.avatarUrl ? (
+                              <img 
+                                src={worker.avatarUrl} 
+                                alt={worker.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              worker.name.charAt(0)
+                            )}
                           </div>
                           <div>
                             <p className="font-medium text-white">{worker.name}</p>
@@ -201,11 +236,13 @@ export default function PaymentsPage() {
                       </td>
                       <td className="text-center py-4 px-4">
                         <span className="text-lg font-bold text-asoldi-400">
-                          {(worker.paymentInfo?.totalOwed || 0).toLocaleString()} kr
+                          {calculateTotalOwed(worker).toLocaleString()} kr
                         </span>
                       </td>
                       <td className="text-center py-4 px-4">
-                        {worker.checklist.bankDetailsReceived ? (
+                        {worker.checklist.personalDetailsReceived && 
+                         worker.checklist.contractSigned && 
+                         worker.checklist.systemAccessGranted ? (
                           <span className="badge badge-success flex items-center gap-1 justify-center">
                             <CheckCircle2 className="w-3 h-3" />
                             Ready

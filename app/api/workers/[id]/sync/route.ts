@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getWorkerById, updateWorkerMyphonerStats } from '@/lib/data';
+import { getWorkerById, updateWorker } from '@/lib/data';
 import { getAgentStatsByEmail } from '@/lib/myphoner';
 
 interface Props {
@@ -32,8 +32,18 @@ export async function POST(request: NextRequest, { params }: Props) {
       });
     }
 
-    // Update worker with new stats
-    const updatedWorker = updateWorkerMyphonerStats(id, result.stats);
+    // Update worker with new stats and MyPhoner creation date if WordPress date not available
+    const updates: any = { 
+      myphonerStats: {
+        ...result.stats,
+        lastSyncDate: new Date().toISOString().split('T')[0],
+      }
+    };
+    if (result.createdAt && !worker.wordpressCreatedAt) {
+      updates.startDate = result.createdAt;
+    }
+
+    const updatedWorker = updateWorker(id, updates);
 
     return NextResponse.json({
       success: true,

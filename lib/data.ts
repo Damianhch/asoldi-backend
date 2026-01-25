@@ -8,13 +8,47 @@ const DATA_FILE_PATH = path.join(process.cwd(), '.builds', 'data', 'workers.json
 // In-memory data store - workers will be synced from WordPress
 let workers: Worker[] = [];
 
+// Migrate old checklist structure to new structure
+function migrateChecklist(oldChecklist: any): WorkerChecklist {
+  // If it's already in the new format, return as is
+  if (oldChecklist.personalDetailsReceived !== undefined && 
+      oldChecklist.twoWeekMeeting === undefined &&
+      oldChecklist.trainingCompleted === undefined &&
+      oldChecklist.welcomeEmailSent === undefined &&
+      oldChecklist.bankDetailsReceived === undefined &&
+      oldChecklist.taxFormReceived === undefined) {
+    return oldChecklist as WorkerChecklist;
+  }
+
+  // Migrate from old format to new format
+  return {
+    contractSent: oldChecklist.contractSent ?? false,
+    contractSigned: oldChecklist.contractSigned ?? false,
+    oneWeekMeeting: oldChecklist.oneWeekMeeting ?? false,
+    monthlyReview: oldChecklist.monthlyReview ?? false,
+    systemAccessGranted: oldChecklist.systemAccessGranted ?? false,
+    // Combine bankDetailsReceived and taxFormReceived into personalDetailsReceived
+    personalDetailsReceived: (oldChecklist.bankDetailsReceived ?? false) || (oldChecklist.taxFormReceived ?? false) || (oldChecklist.personalDetailsReceived ?? false),
+  };
+}
+
 // Load workers from file on startup
 function loadWorkersFromFile(): void {
   try {
     if (fs.existsSync(DATA_FILE_PATH)) {
       const fileContent = fs.readFileSync(DATA_FILE_PATH, 'utf8');
-      workers = JSON.parse(fileContent);
-      console.log(`Loaded ${workers.length} workers from file: ${DATA_FILE_PATH}`);
+      const loadedWorkers = JSON.parse(fileContent);
+      
+      // Migrate each worker's checklist
+      workers = loadedWorkers.map((worker: any) => ({
+        ...worker,
+        checklist: migrateChecklist(worker.checklist || {}),
+      }));
+      
+      // Save migrated data back to file
+      saveWorkersToFile();
+      
+      console.log(`Loaded and migrated ${workers.length} workers from file: ${DATA_FILE_PATH}`);
     }
   } catch (error) {
     console.log('No existing workers file found, starting fresh');
@@ -42,13 +76,9 @@ export const DEFAULT_CHECKLIST: WorkerChecklist = {
   contractSent: false,
   contractSigned: false,
   oneWeekMeeting: false,
-  twoWeekMeeting: false,
   monthlyReview: false,
-  trainingCompleted: false,
   systemAccessGranted: false,
-  welcomeEmailSent: false,
-  bankDetailsReceived: false,
-  taxFormReceived: false,
+  personalDetailsReceived: false,
 };
 
 // Data access functions
@@ -101,6 +131,7 @@ export function addOrUpdateWorkerByEmail(workerData: {
   email: string;
   wordpressId?: number;
   role?: 'caller' | 'admin' | 'other';
+  wordpressCreatedAt?: string;
 }): Worker {
   const existing = getWorkerByEmail(workerData.email);
   
@@ -109,6 +140,8 @@ export function addOrUpdateWorkerByEmail(workerData: {
     return updateWorker(existing.id, {
       name: workerData.name,
       wordpressId: workerData.wordpressId || existing.wordpressId,
+      wordpressCreatedAt: workerData.wordpressCreatedAt || existing.wordpressCreatedAt,
+      startDate: workerData.wordpressCreatedAt || existing.startDate, // Use WordPress creation date as start date
       // Keep all existing data - don't overwrite checklist, notes, stats, paymentInfo, etc.
     }) as Worker;
   }
@@ -120,13 +153,11 @@ export function addOrUpdateWorkerByEmail(workerData: {
     wordpressId: workerData.wordpressId,
     role: workerData.role || 'caller',
     status: 'active',
-    startDate: new Date().toISOString().split('T')[0],
+    startDate: workerData.wordpressCreatedAt || new Date().toISOString().split('T')[0],
+    wordpressCreatedAt: workerData.wordpressCreatedAt,
     checklist: { ...DEFAULT_CHECKLIST },
     myphonerStats: {
-      totalCalls: 0,
       meetingsBooked: 0,
-      hoursCalled: 0,
-      conversionRate: 0,
     },
     paymentInfo: {
       hourlyRate: 0,
@@ -153,10 +184,20 @@ export function getDashboardStats(): DashboardStats {
   const onboardingWorkers = workers.filter(w => w.status === 'onboarding');
   
   const totalMeetings = workers.reduce((sum, w) => sum + (w.myphonerStats?.meetingsBooked || 0), 0);
-  const totalHours = workers.reduce((sum, w) => sum + (w.myphonerStats?.hoursCalled || 0), 0);
-  const totalOwed = workers.reduce((sum, w) => sum + (w.paymentInfo?.totalOwed || 0), 0);
+  // Removed hoursCalled - not tracking this anymore
+  
+  // Calculate total owed for current month for all workers
+  const totalOwed = workers.reduce((sum, w) => {
+    return sum + calculateTotalOwedForCurrentMonth(w);
+  }, 0);
   
   const daysUntilPayday = calculateDaysUntilPayday();
+  
+  // Check if any worker is overdue (not paid for previous month)
+  const isOverdue = workers.some(w => {
+    if (!w.paymentInfo || w.status === 'inactive') return false;
+    return isPaymentOverdue(w.paymentInfo.lastPaymentDate);
+  });
   
   return {
     totalWorkers: workers.length,
@@ -165,6 +206,7 @@ export function getDashboardStats(): DashboardStats {
     totalHoursThisMonth: totalHours,
     totalOwedThisMonth: totalOwed,
     daysUntilPayday,
+    isOverdue,
     pendingOnboarding: onboardingWorkers.length,
   };
 }
@@ -208,10 +250,7 @@ export function addWorkerNote(workerId: string, content: string, createdBy: stri
 export function updateWorkerMyphonerStats(
   workerId: string,
   stats: {
-    totalCalls: number;
     meetingsBooked: number;
-    hoursCalled: number;
-    conversionRate: number;
   }
 ): Worker | null {
   const result = updateWorker(workerId, {
@@ -229,11 +268,8 @@ function getNextPayday(): string {
   const today = new Date();
   const currentMonth = today.getMonth();
   const currentYear = today.getFullYear();
-  let nextPayday = new Date(currentYear, currentMonth, 25);
-  
-  if (today > nextPayday) {
-    nextPayday = new Date(currentYear, currentMonth + 1, 25);
-  }
+  // Payday is always the 1st of next month (for current month's earnings)
+  const nextPayday = new Date(currentYear, currentMonth + 1, 1);
   
   return nextPayday.toISOString().split('T')[0];
 }
@@ -242,13 +278,45 @@ function calculateDaysUntilPayday(): number {
   const today = new Date();
   const currentMonth = today.getMonth();
   const currentYear = today.getFullYear();
-  let nextPayday = new Date(currentYear, currentMonth, 25);
-  
-  if (today > nextPayday) {
-    nextPayday = new Date(currentYear, currentMonth + 1, 25);
-  }
+  // Payday is always the 1st of next month
+  const nextPayday = new Date(currentYear, currentMonth + 1, 1);
   
   return Math.ceil((nextPayday.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+// Check if payment is overdue (if we're past the 1st and lastPaymentDate is before the 1st of current month)
+function isPaymentOverdue(lastPaymentDate?: string): boolean {
+  if (!lastPaymentDate) {
+    // If never paid, check if we're past the 1st of current month
+    const today = new Date();
+    return today.getDate() > 1;
+  }
+  
+  const today = new Date();
+  const currentMonth = today.getMonth();
+  const currentYear = today.getFullYear();
+  const firstOfCurrentMonth = new Date(currentYear, currentMonth, 1);
+  const lastPayment = new Date(lastPaymentDate);
+  
+  // If we're past the 1st and last payment was before the 1st of current month, it's overdue
+  return today.getDate() > 1 && lastPayment < firstOfCurrentMonth;
+}
+
+// Calculate total owed for current month (from 1st of month to today)
+export function calculateTotalOwedForCurrentMonth(worker: Worker): number {
+  if (!worker.paymentInfo || !worker.myphonerStats) {
+    return 0;
+  }
+  
+  const commissionPerMeeting = worker.paymentInfo.commissionPerMeeting || 0;
+  const meetingsBooked = worker.myphonerStats.meetingsBooked || 0;
+  
+  // Calculate based on current month's stats
+  // Note: This assumes myphonerStats.meetingsBooked is for current month period
+  // If it's not, you'll need to sync with 'month' interval specifically for payment calculation
+  const meetingsPayment = meetingsBooked * commissionPerMeeting;
+  
+  return meetingsPayment;
 }
 
 // Clear all workers (for re-sync)

@@ -5,7 +5,6 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard,
   Users,
-  Phone,
   CreditCard,
   LogOut,
   ChevronLeft,
@@ -19,7 +18,6 @@ import { useState } from 'react';
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Workers', href: '/dashboard/workers', icon: Users },
-  { name: 'MyPhoner Stats', href: '/dashboard/myphoner', icon: Phone },
   { name: 'Income', href: '/dashboard/income', icon: DollarSign },
   { name: 'Clients', href: '/dashboard/clients', icon: Building },
   { name: 'Payments', href: '/dashboard/payments', icon: CreditCard },
