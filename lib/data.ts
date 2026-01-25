@@ -185,6 +185,7 @@ export function getDashboardStats(): DashboardStats {
   
   const totalMeetings = workers.reduce((sum, w) => sum + (w.myphonerStats?.meetingsBooked || 0), 0);
   // Removed hoursCalled - not tracking this anymore
+  const totalHours = 0; // Hours tracking disabled
   
   // Calculate total owed for current month for all workers
   const totalOwed = workers.reduce((sum, w) => {
