@@ -805,7 +805,7 @@ export async function syncWorkerWithMyphoner(
     return false;
   });
   
-  console.log(`🔍 Filtered ${agentLeads.length} leads for agent ${email} (from ${leadsResponse.data.length} total)`);
+  console.log(`🔍 Filtered ${agentLeads.length} leads for agent ${agent.email} (from ${leadsResponse.data.length} total)`);
 
   // Convert to calls - leads that have been contacted (not "new")
   const calls: MyphonerCall[] = agentLeads
