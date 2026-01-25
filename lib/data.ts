@@ -1,4 +1,4 @@
-import { Worker, DashboardStats, WorkerChecklist } from './types';
+import { Worker, DashboardStats, WorkerChecklist, MyphonerStats } from './types';
 import fs from 'fs';
 import path from 'path';
 
@@ -249,12 +249,14 @@ export function addWorkerNote(workerId: string, content: string, createdBy: stri
 
 export function updateWorkerMyphonerStats(
   workerId: string,
-  stats: {
-    meetingsBooked: number;
-  }
+  stats: Partial<MyphonerStats> & { meetingsBooked: number }
 ): Worker | null {
+  const worker = getWorkerById(workerId);
+  if (!worker) return null;
+  
   const result = updateWorker(workerId, {
     myphonerStats: {
+      ...worker.myphonerStats,
       ...stats,
       lastSyncDate: new Date().toISOString().split('T')[0],
     },

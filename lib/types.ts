@@ -37,7 +37,10 @@ export interface WorkerChecklist {
 }
 
 export interface MyphonerStats {
+  totalCalls?: number;
   meetingsBooked: number; // Winners/meetings booked
+  hoursCalled?: number;
+  conversionRate?: number;
   lastSyncDate?: string;
 }
 
