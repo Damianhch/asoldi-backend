@@ -44,31 +44,10 @@ export async function POST(request: NextRequest) {
           const workers = getWorkers();
           const worker = workers.find(w => w.email.toLowerCase() === userEmail.toLowerCase());
           
-          if (worker) {
-            // Update worker stats with this call
-            const currentStats = worker.myphonerStats || {
-              totalCalls: 0,
-              meetingsBooked: 0,
-              hoursCalled: 0,
-              conversionRate: 0,
-            };
-            
-            // Increment calls and add hours
-            const newTotalCalls = currentStats.totalCalls + 1;
-            const newHoursCalled = currentStats.hoursCalled + (duration / 3600);
-            const newConversionRate = currentStats.meetingsBooked > 0 
-              ? ((currentStats.meetingsBooked / newTotalCalls) * 100).toFixed(1)
-              : 0;
-            
-            updateWorkerMyphonerStats(worker.id, {
-              totalCalls: newTotalCalls,
-              meetingsBooked: currentStats.meetingsBooked,
-              hoursCalled: Number(newHoursCalled.toFixed(1)),
-              conversionRate: Number(newConversionRate),
-            });
-            
-            console.log(`✅ Updated stats for ${worker.email}: ${newTotalCalls} calls, ${newHoursCalled.toFixed(1)}h`);
-          }
+          // Note: We don't track calls/hours in real-time anymore
+          // Only meetings (winners) are tracked via webhooks
+          // This webhook is kept for future use if needed
+          console.log(`📞 Call webhook received for ${userEmail}, duration: ${duration}s`);
         }
       }
     } else if (resourceType === 'leads') {
@@ -107,22 +86,13 @@ export async function POST(request: NextRequest) {
             
             if (worker) {
               const currentStats = worker.myphonerStats || {
-                totalCalls: 0,
                 meetingsBooked: 0,
-                hoursCalled: 0,
-                conversionRate: 0,
               };
               
               const newMeetingsBooked = currentStats.meetingsBooked + 1;
-              const newConversionRate = currentStats.totalCalls > 0
-                ? ((newMeetingsBooked / currentStats.totalCalls) * 100).toFixed(1)
-                : 0;
               
               updateWorkerMyphonerStats(worker.id, {
-                totalCalls: currentStats.totalCalls,
                 meetingsBooked: newMeetingsBooked,
-                hoursCalled: currentStats.hoursCalled,
-                conversionRate: Number(newConversionRate),
               });
               
               console.log(`✅ Updated meetings for ${worker.email}: ${newMeetingsBooked} meetings`);
