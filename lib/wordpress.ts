@@ -302,7 +302,7 @@ export function wpUserToWorkerData(wpUser: WordPressUser): {
 // Sync WordPress employees - returns the employee data
 export async function syncWordPressEmployees(): Promise<{
   synced: number;
-  employees: Array<{ name: string; email: string; wordpressId: number }>;
+  employees: Array<{ name: string; email: string; wordpressId: number; wordpressCreatedAt?: string }>;
   error?: string;
 }> {
   const response = await getWordPressEmployees();
